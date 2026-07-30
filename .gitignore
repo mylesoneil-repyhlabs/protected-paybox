@@ -1,0 +1,9 @@
+.DS_Store
+.protected-paybox-runtime/
+.protected-paybox-node
+artifacts/
+coverage/
+node_modules/
+*.log
+*.zip
+*.sha256

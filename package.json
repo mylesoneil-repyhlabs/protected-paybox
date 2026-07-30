@@ -1,0 +1,19 @@
+{
+  "name": "protected-paybox",
+  "version": "0.1.0",
+  "description": "Mandate-gated PayBox on-chain swap simulation and conformance prototype.",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "doctor": "node src/cli.js doctor",
+    "plan": "node src/cli.js plan",
+    "demo": "node src/cli.js demo",
+    "simulate": "node src/cli.js simulate",
+    "verify": "node src/cli.js verify",
+    "test": "node --test test/*.test.js",
+    "check:skill": "python3 /Users/grosvenoroneil/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/protected-paybox"
+  }
+}

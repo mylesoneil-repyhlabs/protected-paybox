@@ -1,0 +1,4 @@
+interface:
+  display_name: "Protected PayBox"
+  short_description: "Mandate-gated PayBox on-chain operations"
+  default_prompt: "Use $protected-paybox to run a protected on-chain swap dry run."

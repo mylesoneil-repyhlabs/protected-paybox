@@ -1,0 +1,16 @@
+{
+  "schema_version": "protected-paybox.intent.v1",
+  "action_type": "onchain.swap.exact_in",
+  "chain_id": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+  "wallet_account": "8xQeWvG816bUx9EPjHmaT23yvVMQV4MfMjcnW8nx2Wn",
+  "sell_asset": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+  "buy_asset": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/slip44:501",
+  "sell_amount_atomic": "5000000",
+  "minimum_receive_atomic": "25000000",
+  "max_slippage_bps": 50,
+  "max_price_impact_bps": 60,
+  "max_network_fee_atomic": "200000",
+  "max_priority_fee_atomic": "100000",
+  "allowed_builder": "swaps.xyz",
+  "expires_in_seconds": 120
+}
