@@ -34,8 +34,9 @@ if (( NODE_MAJOR < 22 )); then
   exit 1
 fi
 
+TEMPORARY_ROOT="$(cd "${TMPDIR:-/tmp}" && pwd -P)"
 VALIDATION_DIRECTORY="$(
-  mktemp -d "${TMPDIR:-/tmp}/protected-paybox-cold-install.XXXXXX"
+  mktemp -d "$TEMPORARY_ROOT/protected-paybox-cold-install.XXXXXX"
 )"
 cleanup() {
   rm -rf -- "$VALIDATION_DIRECTORY"

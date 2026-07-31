@@ -21,8 +21,9 @@ RELEASE_COMMIT="$(
   git -C "$REPOSITORY_ROOT" rev-parse --verify "${RELEASE_REF}^{commit}"
 )"
 
+TEMPORARY_ROOT="$(cd "${TMPDIR:-/tmp}" && pwd -P)"
 BUILD_DIRECTORY="$(
-  mktemp -d "${TMPDIR:-/tmp}/protected-paybox-release.XXXXXX"
+  mktemp -d "$TEMPORARY_ROOT/protected-paybox-release.XXXXXX"
 )"
 cleanup() {
   rm -rf -- "$BUILD_DIRECTORY"
