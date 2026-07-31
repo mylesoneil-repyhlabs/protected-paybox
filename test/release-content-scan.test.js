@@ -50,6 +50,9 @@ test("release scanner rejects OAuth and provider secret forms", async (t) => {
     JSON.stringify({ [["client", "secret"].join("_")]: secret }),
     JSON.stringify({ [["session", "token"].join("_")]: secret }),
     `${["access", "token"].join("_")}=${secret}`,
+    `${["sk", "live"].join("_")}_${secret}`,
+    `${["sk", "test"].join("_")}_${secret}`,
+    `${["rk", "live"].join("_")}_${secret}`,
   ];
 
   for (const [index, payload] of cases.entries()) {
