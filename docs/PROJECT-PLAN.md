@@ -1,13 +1,14 @@
 # Protected PayBox project plan
 
-Status: Sprint 1, Mini-sprint 1, Sprint 2, and Mini-sprint 2 complete
+Status: Sprint 1 through Mini-sprint 2 complete; Sprint 3 implementation
+complete; committed archive verification and Mini-sprint 3 pending
 Date: 2026-07-30
 Owner: delta product and engineering
 Target repository: personal GitHub, separate from Coinbase Guard
 
 ## Product truth today
 
-Sprint 1 and Mini-sprint 1 are complete. Protected PayBox provides a valid,
+Protected PayBox provides a valid,
 credential-free skill package and deterministic CLI for one strict Solana
 Mainnet USDC-to-SOL transaction-shaped fixture. It compiles a closed mandate,
 evaluates complete labeled fixture evidence, returns `PASS`, `BLOCK`, or
@@ -26,10 +27,11 @@ the labeled fixture only when supplied that exact saved plan and digest. The
 direct custom-intent demo shortcut is intentionally unsupported. The
 confirmation binds bytes, not identity: the CLI cannot authenticate who
 authored a chat message.
-Canonical one-use state stays in the fixed private runtime; the CLI does not
-accept a caller-selected history directory. Once that policy produces a
-`PASS`, a later attempt under a different nonce returns
-`BLOCK/PLAN_ALREADY_USED`.
+Canonical one-use state stays in the fixed private runtime; a managed install
+keeps it in the product-level owner-only `state` directory outside immutable
+version payloads. The CLI does not accept a caller-selected history directory.
+Once that policy produces a `PASS`, a later attempt under a different nonce
+returns `BLOCK/PLAN_ALREADY_USED`, including after a verified version upgrade.
 
 Sprint 2 integrates an offline `inspect-tools` command and the
 `SOLANA-EVIDENCE-CONTRACT.md` partner contract. The inspector accepts a saved
@@ -38,12 +40,23 @@ redacts value-bearing schema examples, and produces a deterministic snapshot.
 It has no OAuth or network path and cannot establish that a capture came from
 PayBox.
 
-The v0.2 direct pre-installer suite was rerun on 2026-07-30: 104/104 tests
-passed. It covers exact decoded-operation and message-byte binding,
-complete-evidence nonce binding, stale and expired replay prevention, one-use
-policy consumption, atomic cross-process once-write behavior, receipt
-self-consistency, redaction, closed schemas, offline tool-surface inspection,
-and the public execution lock.
+Sprint 3 implementation adds a private, versioned managed installer with an
+exact per-file SHA-256 manifest, restricted-`PATH` runtime discovery,
+idempotent same-version installation, verified explicit `--upgrade`, and
+operation after extracted-source deletion. Mutable plans and one-use history
+live in a separate owner-only product state directory so the versioned payload
+remains immutable and replay state survives upgrade. It also adds release/CI
+validators and a pure local signing-hook conformance hypothesis. The
+production composition always throws `PUBLIC_EXECUTION_LOCKED` before
+inspecting its argument.
+
+The current source tree passes 133/133 full-suite tests, including 17/17
+managed-installer tests, 10/10 local signing-hook tests, and 2/2
+release-content scanner tests. Skill, local-link,
+release-metadata, and source-content checks also pass. The same-commit,
+same-toolchain archive-repeatability builder and cold-install validator exist,
+but a committed-ref archive and independent Mini-sprint 3 review have not yet
+run.
 
 PayBox has not been contacted. No authenticated `tools/list`, OAuth session,
 wallet, quote, chain state, venue response, or network simulation has been
@@ -333,9 +346,11 @@ Sprint 2, integrated offline surfaces
   |- Solana F1/L1 evidence and trust contract
   `- no OAuth, PayBox, venue, chain, or Delta adapter
 
-Sprint 3, planned
-  |- managed installer and reproducible release validation
-  |- PayBox signing-boundary conformance artifacts
+Sprint 3, implemented locally
+  |- private versioned managed installer and exact SHA manifest
+  |- deterministic release and cold-install validation scripts
+  |- pure local PayBox signing-boundary conformance artifacts
+  |- production composition always runtime-locked
   `- authenticated/live adapters remain gated on discovered contracts
 ```
 
@@ -577,30 +592,39 @@ merely because `inspect-tools` accepts a saved capture. It still requires:
 ## Sprint 3: installable partner release and signing-boundary conformance kit
 
 Release target: `v0.3.0`
+State: implementation complete in the source tree; release verification and
+Mini-sprint 3 pending
 
 Sprint 3 does not enable public signing. It packages the prototype
 reproducibly and turns the evidence contract into the asset used to pitch a
 native PayBox integration.
 
-### Team deliverables
+### Team result
 
-- PM: partner narrative, responsibility model, latency budget, rollout gates,
-  and exact native-hook ask.
-- Engineering lead: installer/release architecture, production-shaped adapter
-  contract, and private-composition boundary.
-- Senior engineer: managed installer, conformance harness, durable-grant
-  contract, recovery state machine, and adversarial fixtures.
-- Data engineer: proof/evidence binding manifest and reconciliation schema.
-- DevOps: deterministic release archive and checksum, allowlisted manifest,
-  restricted-`PATH` cold-install verification, source-deletion installed
-  checks, isolated conformance environment, and fault injection.
-- Design/front-end: three-minute `BLOCK -> PASS -> mutation/replay rejected`
-  demo.
-- QA: independent attack review across bypass, proof mismatch, expiry,
-  revocation, concurrency, restart, uncertain broadcast, reorg, and receipt
-  verification.
-- Persona: confirm the experience preserves useful autonomy without requiring
-  approval for every in-policy proposal.
+- PM: froze the non-signing partner asset, made the native-hook ask explicit,
+  and kept archive/release claims behind final verification.
+- Engineering lead: defined the managed-install and allowlisted-release
+  boundaries and made the production composition fail closed before it can
+  read credentials or clients.
+- Senior engineer: implemented the private versioned installer, exact manifest
+  verification, closed signing-hook schema, exact claim comparison, semantic
+  limits, stable product-level replay state across installed versions, and a
+  deliberately in-memory one-use signing-hook conformance consumer.
+- Data engineer: bound policy, proposal, message, route, chain, wallet, fee
+  payer, exact assets and amounts, recipient, builder, fee limits, nonce, and
+  validity in the local hook hypothesis.
+- DevOps: implemented Node 22/24 CI with immutable action SHAs,
+  skill/link/metadata/content checks, allowlisted same-commit archive
+  repeatability, checksum creation,
+  restricted-`PATH` cold-install validation, and source-deletion checks.
+- Design/front-end: kept install, simulation, local conformance, and locked
+  execution visibly distinct in the README and ordinary output.
+- QA: brought the full source suite to 133/133, including 17/17 managed
+  installer tests, 10/10 local signing-hook tests, and 2/2 release-content
+  scanner tests.
+- Persona: the current journey preserves one policy authorization followed by
+  deterministic evaluation; direct external target-user feedback is not
+  claimed.
 
 ### Required future native handshake
 
@@ -617,31 +641,59 @@ native PayBox integration.
 
 ### Sprint 3 exit gate
 
-- Changed bytes, wrong wallet/client, expired proof, replay, concurrent use,
-  restart, and revocation all fail.
-- One-use consumption is durable and atomic.
-- Ambiguous broadcast enters reconciliation-only state.
-- The conformance kit demonstrates that a raw alternate mutation path would
-  defeat enforcement and specifies how PayBox must remove it.
-- A managed install works from the release package under a restricted
-  `PATH`, remains functional after the unpacked source is removed, and matches
-  the release checksum and allowlisted manifest.
-- Public GitHub code still cannot sign or broadcast.
-- Production Delta proof, PayBox-native enforcement, liability assignment, and
-  mainnet protection remain unclaimed.
-- README, security boundary, claim ledger, sprint log, partner contract, and
-  release artifacts agree.
+- [x] Any local hook-field mutation, wrong audience, invalid semantic bound,
+      or expiry fails.
+- [x] Same-process sequential replay and 50-way concurrent use accept at most
+      one local attempt.
+- [x] The local conformance result discloses that it is not durable and has
+      not verified a cryptographic grant.
+- [x] The conformance kit explains that a raw alternate mutation path defeats
+      skill-level enforcement and specifies the mandatory PayBox-side hook.
+- [x] Managed-install tests cover restricted-`PATH` discovery, exact manifest
+      verification, idempotency, verified explicit upgrade, and operation
+      after extracted-source deletion.
+- [x] Managed plans and evaluator history stay outside immutable version
+      payloads, and one-use state survives a verified upgrade.
+- [x] Public code remains unable to sign or broadcast; the production
+      composition is always locked.
+- [x] Production Delta proof, PayBox-native enforcement, liability assignment,
+      and mainnet protection remain unclaimed.
+- [x] Current source-tree tests and skill/link/metadata/content checks pass.
+- [ ] Build and cold-validate the same-commit/same-toolchain archive from the
+      committed `v0.3.0` source.
+- [ ] Verify the archive checksum, allowlisted contents, installed behavior,
+      tag, and independently downloaded GitHub asset agree.
+- [ ] Complete independent Mini-sprint 3 security, release, and persona QA.
+
+Durable or distributed grant consumption, authenticated issuer proof, PayBox
+client binding, revocation, restart persistence, ambiguous-broadcast recovery,
+and reorg handling are production-partner gates. They are not properties of
+the local conformance simulator.
 
 ### Sprint 3 mini-sprint
 
-Incorporate independent security, PayBox-engineer, and persona findings. Patch
-all enforcement-boundary, receipt, replay, recovery, and documentation
-defects, then repeat the complete release verification.
+State: pending
+
+Required work:
+
+1. Commit the exact candidate source and build the archive from that commit.
+2. Independently inspect installer paths, permissions, symlink rejection,
+   manifest verification, explicit upgrade, and source-deletion durability.
+3. Re-run 133/133 tests and all skill/link/metadata/content checks from the
+   candidate.
+4. Cold-install the archive under a restricted `PATH`, delete the extracted
+   source, and rerun doctor, fixture demo, offline inspector, and execution
+   lock from the managed copy.
+5. Confirm the hook artifact cannot be confused with a cryptographic grant,
+   provider response, durable replay store, or live integration.
+6. Reconcile README and all claim/security documents to final evidence.
+7. After publication, independently download the GitHub asset and verify its
+   checksum and behavior before marking the sprint complete.
 
 ## Good stopping point
 
-Stop after the patched `v0.3.0` partner-evaluation release. At that point the
-asset should provide:
+Stop after the patched `v0.3.0` partner-evaluation release passes every
+remaining Mini-sprint 3 gate. At that point the asset should provide:
 
 - one complete credential-free simulation;
 - an offline tool-surface inspector and explicit Solana evidence contract;

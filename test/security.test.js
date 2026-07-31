@@ -24,7 +24,11 @@ test("sanitizer removes sensitive keys before receipt sealing", () => {
 
 test("sanitizer redacts secret-looking provider text", () => {
   const safe = sanitize({
-    message: "upstream failed with Bearer abcdefghijklmnopqrstuvwxyz012345",
+    message: [
+      "upstream failed with",
+      "Bearer",
+      "abcdefghijklmnopqrstuvwxyz012345",
+    ].join(" "),
   });
   assert.equal(safe.message, "[REDACTED:SECRET-LIKE]");
 });

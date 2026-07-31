@@ -1,7 +1,7 @@
 # Protected PayBox security boundary
 
-Status: Sprint 2 offline boundary and Mini-sprint 2 QA complete; live
-execution locked
+Status: v0.3.0 source implementation complete; live execution locked;
+committed archive and independent Mini-sprint 3 verification pending
 Date: 2026-07-30
 
 ## Current boundary
@@ -12,12 +12,13 @@ evidence, exact fixture-message decoding and byte binding, `PASS`, `BLOCK`, and
 `REVIEW`, an unkeyed SHA-256 local self-consistency checksum, canonical
 one-use policy state, and explicitly locked execution.
 
-The v0.2 direct pre-installer Node suite was rerun on 2026-07-30 and is
-104/104 green. It verifies exact decoded-operation binding, nonce semantics
-over the complete evidence bundle, current re-evaluation before replay, stale
-and expired replay prevention, canonical one-use policy consumption, atomic
-same-process and cross-process once-write behavior, and offline tool-surface
-inspection.
+The current Node suite is 133/133 green. It verifies exact
+decoded-operation binding, nonce semantics over the complete evidence bundle,
+current re-evaluation before replay, stale and expired replay prevention,
+canonical one-use policy consumption, atomic same-process and cross-process
+once-write behavior, offline tool-surface inspection, managed installation,
+and the local signing-hook conformance hypothesis. The 17 installer tests, 10
+hook tests, and 2 release-content scanner tests also pass as targeted subsets.
 
 The current product has not authenticated to PayBox, captured an authenticated
 PayBox `tools/list`, read a PayBox wallet, requested a live quote, contacted
@@ -31,6 +32,22 @@ redacts value-bearing schema examples, and can write an owner-only
 deterministic snapshot. It has no provider I/O, OAuth client, or MCP
 connection. It is not evidence that any real PayBox tool schema has been
 observed or that a provider behaves as its schema says.
+
+Sprint 3 adds a private, versioned managed installer. It copies only an
+allowlisted payload, rejects source symlinks, stores owner-only files, records
+the exact SHA-256 digest of every managed file, verifies the complete manifest
+before reusing or upgrading an install, and requires explicit `--upgrade`
+between versions. Tests cover restricted-`PATH` runtime discovery and
+operation after the extracted source is removed.
+
+Sprint 3 also adds a closed local signing-hook schema and pure conformance
+functions. They compare every claim field to an independently supplied
+expected claim and enforce current self-wallet semantics, output and fee
+limits, audience, validity, and same-process one-use behavior. They do not
+authenticate an issuer, validate a cryptographic proof, reconstruct a PayBox
+request, contact a provider, or persist replay state. The production
+composition always throws `PUBLIC_EXECUTION_LOCKED` before inspecting its
+argument.
 
 ## Security objective
 
@@ -203,7 +220,13 @@ intent and evidence decision.
 | Ambiguous submission | Reconcile by existing transaction identity; never blindly submit another |
 | Tool or provider schema drift | Bind schema/version digest and deny unknown fields/tools |
 | Secret leakage | OAuth isolation, bounded redaction, sanitize before sealing, release secret scans |
-| Release supply-chain compromise | Pinned dependencies, allowlisted payload, deterministic archive, checksum, cold install |
+| Accidental or inconsistent release contents | Dependency-free runtime, immutable CI action SHAs, allowlisted committed payload, same-commit/same-toolchain double build, checksum, cold install |
+
+The managed manifest and release checksum are unkeyed integrity aids. They do
+not authenticate a publisher or resist an active editor with the same OS-user
+access. The installed runner does not re-verify the manifest on every launch;
+re-running the installer from unchanged source detects managed-file or marker
+divergence.
 
 ## Solana-specific controls
 
@@ -269,10 +292,13 @@ delegate call to an unknown target, or unexplained token transfer cannot pass.
 - Concurrent identical attempts serialize in-process.
 - Cross-process attempts write owner-only temporary records and use one atomic
   hard-link claim, so only one record wins.
-- One-use state is keyed by the policy digest in the fixed private runtime. The
-  CLI does not accept a caller-selected history directory.
+- One-use state is keyed by the policy digest in the fixed private runtime. In
+  a managed install, plans and history live in the owner-only product-level
+  `state` directory outside immutable version payloads. The CLI does not
+  accept a caller-selected history directory.
 - After one nonce produces `PASS`, a different nonce for the same policy
-  returns `BLOCK/PLAN_ALREADY_USED`; it cannot produce a second `PASS`.
+  returns `BLOCK/PLAN_ALREADY_USED`; it cannot produce a second `PASS`, even
+  after a verified managed-version upgrade.
 
 ## Local record and checksum boundary
 
@@ -313,8 +339,8 @@ authorship, authenticity, or independent evidence provenance. It is not:
 - Never request a raw OAuth token, agent-client key, private key, seed phrase,
   key share, passkey export, or PayBox secret in chat.
 - Keep credentials outside the repository and managed release.
-- Use credentials only inside the current adapter process or approved host
-  credential store.
+- A future live adapter may use credentials only inside its own process or an
+  approved host credential store.
 - Do not persist raw headers, OAuth responses, PayBox bodies, wallet labels,
   internal IDs, account lists, or arbitrary provider error text.
 - Store only allowlisted redacted facts and fingerprints with owner-only
@@ -331,9 +357,9 @@ approval, broadcast, secret, or card output. This is directly covered by the
 green test suite. This is a runtime-enforced product boundary, not a
 type-level or packaging guarantee.
 
-Through Sprint 3, the public build must preserve this boundary. A reviewed
-private composition may eventually provide a closure-held signing capability
-only after all conformance gates pass.
+The v0.3.0 public build preserves this boundary. A reviewed private
+composition may eventually provide a closure-held signing capability only
+after all conformance gates pass.
 
 ## Locked or unclaimed capabilities
 
@@ -344,6 +370,8 @@ only after all conformance gates pass.
 - live-chain transaction simulation;
 - PayBox approval, signature, or broadcast;
 - production Delta integration;
+- a cryptographically authenticated or provider-backed signing-hook grant;
+- durable or distributed hook replay consumption;
 - keyed or signed Delta receipt;
 - independent source authentication;
 - bypass resistance;
@@ -355,29 +383,42 @@ only after all conformance gates pass.
 These remain locked until implementation evidence and the claim ledger say
 otherwise.
 
-The following offline Sprint 2 surfaces are implemented and are not included
-in the locked list:
+The following offline surfaces are implemented and are not included in the
+locked list:
 
 - `inspect-tools` analysis of a saved, untrusted `tools/list` capture;
 - deterministic redacted tool-risk snapshots; and
 - the fixture/live separation and proposed fields in
-  `SOLANA-EVIDENCE-CONTRACT.md`.
+  `SOLANA-EVIDENCE-CONTRACT.md`;
+- private versioned managed installation with exact file-digest verification;
+  and
+- the pure local signing-hook schema, exact comparison, semantic validation,
+  expiry check, and same-process replay simulator.
 
 ## Release security gate
 
-Each release must pass:
+Implemented and currently passing or directly validated in the source tree:
 
 - full unit, integration, adversarial, and UX tests;
 - skill metadata and workflow validation;
 - local-link validation;
-- credential and secret-content scan;
-- release-path allowlist;
-- deterministic archive generation;
-- checksum generation;
+- credential and secret-content scan, including OAuth access, refresh and
+  session tokens and client-secret forms;
+- explicit managed-copy and release-archive path allowlists;
 - restricted-`PATH` managed install;
-- source deletion followed by installed doctor and default-flow checks;
-- independent GitHub re-download and checksum verification;
+- source deletion followed by an installed doctor check;
 - README, security boundary, claim ledger, and shipped behavior comparison.
+
+Still pending before the v0.3.0 release gate can be marked complete:
+
+- build the archive twice from the exact committed source under the same
+  toolchain and compare bytes;
+- cold-validate that committed archive and generate its checksum;
+- complete independent Mini-sprint 3 security, installer, persona, and
+  claim-accuracy review;
+- publish the matching tag and asset; and
+- independently re-download the GitHub asset and verify its checksum and
+  installed behavior.
 
 The README must describe current verified functionality only. Historical
 detail belongs in tags, releases, changelog, or sprint log.

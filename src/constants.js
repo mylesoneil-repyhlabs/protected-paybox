@@ -1,5 +1,5 @@
 export const PRODUCT_NAME = "Protected PayBox";
-export const VERSION = "0.2.0";
+export const VERSION = "0.3.0";
 
 export const SCHEMAS = Object.freeze({
   INTENT: "protected-paybox.intent.v1",
@@ -9,6 +9,7 @@ export const SCHEMAS = Object.freeze({
   PROPOSAL: "protected-paybox.proposal.solana-message.v1",
   RECORD: "protected-paybox.record.v1",
   RECEIPT: "protected-paybox.local-checksum-receipt.v1",
+  PAYBOX_SIGNING_HOOK: "protected-paybox.paybox-signing-hook.v1",
 });
 
 export const DECISIONS = Object.freeze({

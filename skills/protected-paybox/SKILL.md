@@ -74,7 +74,8 @@ Authorize this mandate
 
 The CLI binds the supplied digest but cannot authenticate who authored a chat
 message. This pause is a required skill workflow, not a bypass-resistant
-security boundary. Never claim otherwise.
+security boundary. The skill alone cannot prevent an agent from bypassing it
+and calling a separately exposed PayBox mutation tool. Never claim otherwise.
 
 After that separate message, evaluate a labeled custom fixture using the
 saved plan path and the exact displayed policy digest:

@@ -1,4 +1,10 @@
 #!/usr/bin/env node
+import {
+  existsSync,
+  lstatSync,
+  readFileSync,
+  realpathSync,
+} from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import process from "node:process";
@@ -23,7 +29,6 @@ import { formatDecision, renderHtml } from "./report.js";
 import { verifyRecord } from "./receipt.js";
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const DEFAULT_RUNTIME = path.join(ROOT, ".protected-paybox-runtime");
 
 main().catch((error) => {
   const typed = asGuardError(error);
@@ -102,7 +107,9 @@ async function planCommand(options) {
     "intent file",
   );
   const plan = createPlan(intent);
-  const outputDirectory = path.resolve(options.out ?? path.join(DEFAULT_RUNTIME, "plans"));
+  const outputDirectory = path.resolve(
+    options.out ?? path.join(runtimeRoot(), "plans"),
+  );
   const outputPath = path.join(outputDirectory, `${plan.plan_id}.json`);
   await writePrivateJson(outputPath, plan);
   if (options.json) {
@@ -171,7 +178,7 @@ async function demoCommand(options) {
     nonce: `demo-${scenario}-${digest(now.toISOString()).slice(0, 24)}`,
     now,
     historyDirectory: options.plan
-      ? path.join(DEFAULT_RUNTIME, "history")
+      ? path.join(runtimeRoot(), "history")
       : null,
   });
   await persistRecord(result.record, options.out);
@@ -203,7 +210,7 @@ async function simulateCommand(options) {
     confirmationDigest: options["confirm-policy"],
     evidence,
     nonce: options.nonce,
-    historyDirectory: path.join(DEFAULT_RUNTIME, "history"),
+    historyDirectory: path.join(runtimeRoot(), "history"),
   });
   await persistRecord(result.record, options.out);
   if (options.json) print({ ...result, verification: verifyRecord(result.record) });
@@ -269,6 +276,59 @@ async function persistRecord(record, output) {
 
 function validateLoadedPlan(plan) {
   validatePlan(plan);
+}
+
+function runtimeRoot() {
+  const markerPath = path.join(ROOT, ".protected-paybox-install.json");
+  if (!existsSync(markerPath)) {
+    return path.join(ROOT, ".protected-paybox-runtime");
+  }
+
+  const markerMetadata = lstatSync(markerPath);
+  if (markerMetadata.isSymbolicLink() || !markerMetadata.isFile()) {
+    throw new GuardError(
+      "MANAGED_INSTALL_INVALID",
+      "Managed install marker must be a regular non-symlink file.",
+    );
+  }
+  let marker;
+  try {
+    marker = JSON.parse(readFileSync(markerPath, "utf8"));
+  } catch {
+    throw new GuardError(
+      "MANAGED_INSTALL_INVALID",
+      "Managed install marker is malformed.",
+    );
+  }
+  const versionsRoot = path.dirname(ROOT);
+  if (
+    marker?.schema_version !== "protected-paybox.managed-install.v1" ||
+    marker?.product !== "protected-paybox" ||
+    marker?.version !== VERSION ||
+    path.basename(ROOT) !== `v${VERSION}` ||
+    path.basename(versionsRoot) !== "versions"
+  ) {
+    throw new GuardError(
+      "MANAGED_INSTALL_INVALID",
+      "Managed install identity does not match this runtime.",
+    );
+  }
+  const productRoot = realpathSync(path.dirname(versionsRoot));
+  const stateRoot = path.join(productRoot, "state");
+  if (!existsSync(stateRoot)) {
+    throw new GuardError(
+      "MANAGED_STATE_INVALID",
+      "Managed state directory is missing.",
+    );
+  }
+  const stateMetadata = lstatSync(stateRoot);
+  if (stateMetadata.isSymbolicLink() || !stateMetadata.isDirectory()) {
+    throw new GuardError(
+      "MANAGED_STATE_INVALID",
+      "Managed state must be a real directory.",
+    );
+  }
+  return realpathSync(stateRoot);
 }
 
 function parseOptions(tokens) {

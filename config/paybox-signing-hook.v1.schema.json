@@ -1,0 +1,181 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://delta.network/schemas/protected-paybox/paybox-signing-hook.v1.schema.json",
+  "title": "Protected PayBox signing-hook interface hypothesis",
+  "description": "A local conformance schema, not an observed PayBox API, Delta cryptographic grant, or executable signing interface.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "claim_kind",
+    "audience",
+    "decision",
+    "policy_digest",
+    "proposal_digest",
+    "message_digest",
+    "route_digest",
+    "evidence_digest",
+    "simulation_digest",
+    "tool_contract_digest",
+    "paybox_authority_digest",
+    "action_type",
+    "chain_id",
+    "wallet_account",
+    "fee_payer",
+    "sell_asset",
+    "buy_asset",
+    "sell_amount_atomic",
+    "minimum_receive_atomic",
+    "quoted_receive_atomic",
+    "recipient",
+    "builder",
+    "slippage_bps",
+    "max_slippage_bps",
+    "price_impact_bps",
+    "max_price_impact_bps",
+    "network_fee_atomic",
+    "max_network_fee_atomic",
+    "priority_fee_atomic",
+    "max_priority_fee_atomic",
+    "nonce",
+    "issued_at",
+    "expires_at",
+    "one_use"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "protected-paybox.paybox-signing-hook.v1"
+    },
+    "claim_kind": {
+      "const": "local-interface-hypothesis-not-a-cryptographic-grant"
+    },
+    "audience": {
+      "const": "paybox.signing-boundary"
+    },
+    "decision": {
+      "const": "PASS"
+    },
+    "policy_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "proposal_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "message_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "route_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "evidence_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "simulation_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "tool_contract_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "paybox_authority_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "action_type": {
+      "const": "onchain.swap.exact_in"
+    },
+    "chain_id": {
+      "const": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
+    },
+    "wallet_account": {
+      "$ref": "#/$defs/solanaPublicKey"
+    },
+    "fee_payer": {
+      "$ref": "#/$defs/solanaPublicKey"
+    },
+    "sell_asset": {
+      "const": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+    },
+    "buy_asset": {
+      "const": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/slip44:501"
+    },
+    "sell_amount_atomic": {
+      "$ref": "#/$defs/positiveAtomic"
+    },
+    "minimum_receive_atomic": {
+      "$ref": "#/$defs/positiveAtomic"
+    },
+    "quoted_receive_atomic": {
+      "$ref": "#/$defs/positiveAtomic"
+    },
+    "recipient": {
+      "$ref": "#/$defs/solanaPublicKey"
+    },
+    "builder": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{1,63}$"
+    },
+    "slippage_bps": {
+      "$ref": "#/$defs/bps"
+    },
+    "max_slippage_bps": {
+      "$ref": "#/$defs/bps"
+    },
+    "price_impact_bps": {
+      "$ref": "#/$defs/bps"
+    },
+    "max_price_impact_bps": {
+      "$ref": "#/$defs/bps"
+    },
+    "network_fee_atomic": {
+      "$ref": "#/$defs/unsignedAtomic"
+    },
+    "max_network_fee_atomic": {
+      "$ref": "#/$defs/unsignedAtomic"
+    },
+    "priority_fee_atomic": {
+      "$ref": "#/$defs/unsignedAtomic"
+    },
+    "max_priority_fee_atomic": {
+      "$ref": "#/$defs/unsignedAtomic"
+    },
+    "nonce": {
+      "type": "string",
+      "minLength": 16,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{15,127}$"
+    },
+    "issued_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "one_use": {
+      "const": true
+    }
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "solanaPublicKey": {
+      "type": "string",
+      "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$"
+    },
+    "positiveAtomic": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]*$"
+    },
+    "unsignedAtomic": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)$"
+    },
+    "bps": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000
+    }
+  }
+}

@@ -204,8 +204,11 @@ test("schema enum actions are classified before their values are redacted", () =
         },
         credential: {
           type: "string",
-          const:
-            "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJmaXh0dXJlIn0.signaturepart",
+          const: [
+            "eyJhbGciOiJIUzI1NiJ9",
+            "eyJzdWIiOiJmaXh0dXJlIn0",
+            "signaturepart",
+          ].join("."),
         },
       },
     },

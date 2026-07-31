@@ -7,7 +7,7 @@
 Protected PayBox is an independent Delta prototype. It is not a MoonPay or
 PayBox product, integration, or endorsement.
 
-The current release is credential-free and simulation-only. It cannot contact
+The current build is credential-free and simulation-only. It cannot contact
 PayBox, request a wallet signature, broadcast a transaction, or move funds.
 
 ## The first experience
@@ -41,7 +41,7 @@ closed local policy. It is not a production Delta proof or PayBox execution.
 
 ## Supported surface
 
-| Dimension | Current release |
+| Dimension | Current build |
 | --- | --- |
 | Action | One same-chain `onchain.swap.exact_in` |
 | Chain | Solana Mainnet |
@@ -55,6 +55,7 @@ closed local policy. It is not a production Delta proof or PayBox execution.
 | Decisions | `PASS`, `BLOCK`, `REVIEW` |
 | Evidence | Deterministic local fixtures |
 | PayBox OAuth/tools | Offline captured-schema classifier; no OAuth |
+| Install | Versioned private managed copy plus `$protected-paybox` skill |
 | Signature/broadcast | CLI locked; no execution adapter |
 
 The Swaps.xyz profile is based on
@@ -83,9 +84,34 @@ Missing or stale data never becomes a false policy violation. Unknown Solana
 programs, hidden inner calls, unresolved lookup tables, changed bytes and
 opaque tool schemas fail closed.
 
-## Run the prototype
+## Install the skill
 
 Requirements: macOS or Linux and Node.js 22+.
+
+From an extracted release or repository checkout:
+
+```bash
+./install
+```
+
+The installer creates a private, versioned managed copy, records the exact
+SHA-256 digest of every allowlisted payload file, verifies the copy, and links
+the `$protected-paybox` skill to that copy. It rejects symlinks and unexpected
+payload paths. The installed skill keeps working after the extracted source is
+removed. Re-running the same version is idempotent; moving a verified older
+managed install to a newer version requires:
+
+```bash
+./install --upgrade
+```
+
+Start a new chat after installation so the host reloads its skill inventory.
+Installation makes no network request and does not need PayBox or Delta
+credentials.
+
+## Run the prototype
+
+The repository checkout can also be run directly:
 
 ```bash
 ./run doctor
@@ -194,11 +220,42 @@ Protected PayBox makes the proposed missing layer concrete: evaluate the
 human mandate against exact pre-sign bytes, then require that decision inside
 PayBox's signing boundary.
 
+## Verification state
+
+The current source tree passes:
+
+- 133/133 full-suite tests, including 17/17 managed-installer tests, 10/10
+  local signing-hook conformance tests, and 2/2 release-content scanner tests;
+- installable-skill validation;
+- local-documentation-link validation;
+- release-metadata validation, including immutable GitHub Actions SHAs; and
+- source-content and credential-pattern scanning, including OAuth access,
+  refresh and session tokens plus client-secret forms.
+
+The managed-installer tests cover restricted-`PATH` runtime discovery,
+owner-only versioned storage, exact manifest verification, idempotency,
+explicit verified upgrade, operation after the extracted source is deleted,
+and a separate owner-only state directory whose one-use history survives a
+version upgrade.
+
+Run the local signing-hook subset directly with:
+
+```bash
+npm run conformance:hook
+```
+
+The same-commit, same-toolchain archive repeatability and cold-install
+validation scripts are present, but a committed archive and independent
+Mini-sprint 3 release review have not yet been completed. No GitHub release or
+independently downloaded artifact is claimed here.
+
 ## Documentation
 
 - [Project plan](docs/PROJECT-PLAN.md)
 - [Security boundary](docs/SECURITY-BOUNDARY.md)
 - [Claim ledger](docs/CLAIM-LEDGER.md)
+- [PayBox signing-hook conformance hypothesis](docs/PAYBOX-SIGNING-HOOK-CONFORMANCE.md)
+- [Solana evidence contract](docs/SOLANA-EVIDENCE-CONTRACT.md)
 - [Sprint log](docs/SPRINT-LOG.md)
 
 Primary external references:
@@ -212,7 +269,11 @@ Primary external references:
 ## Security
 
 Do not paste a seed phrase, private key, OAuth token, PayBox client key, or
-session key into the skill or CLI. This release does not need credentials.
+session key into the skill or CLI. This build does not need credentials.
+
+The managed manifest and release checksum are unkeyed integrity aids. They do
+not authenticate the publisher, resist an active editor with the same OS-user
+access, or cause the installed runner to re-verify every file on every launch.
 
 Report security issues privately rather than opening a public issue with
 sensitive data.

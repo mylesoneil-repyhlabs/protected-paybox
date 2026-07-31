@@ -2,8 +2,8 @@
 
 | Contract property | Value |
 | --- | --- |
-| Document version | `0.2.0-draft.1` |
-| Runtime baseline | Protected PayBox `0.2.0` |
+| Document version | `0.3.0-draft.1` |
+| Runtime baseline | Protected PayBox `0.3.0` |
 | Implemented evidence schema | `protected-paybox.evidence.solana-swap.v1` |
 | Implemented policy schema | `protected-paybox.policy.solana-exact-input-swap.v1` |
 | Current profile | `F1`: deterministic local fixture |
@@ -450,6 +450,8 @@ Every normalized fact SHOULD carry:
 | Exact-byte network simulation | Synthetic | Required |
 | Deterministic `PASS/BLOCK/REVIEW` | Implemented for fixture | Extend with separately versioned schema |
 | Local receipt integrity | Implemented, unkeyed SHA-256 | Keep as audit aid, not source proof |
+| Local signing-hook contract | Pure local interface hypothesis with exact equality and semantic checks; no provider or cryptographic authenticity | Replace with a PayBox-observed mandatory hook and production Delta proof verification |
+| Local hook replay behavior | One-process in-memory demonstration; not durable | Durable atomic cross-process and cross-region consumption at the signing boundary |
 | Production Delta proof/grant | Not integrated | Required for enforcement |
 | PayBox signing-hook consumption | Not integrated | Required for bypass resistance |
 | Signature, broadcast, funds movement | CLI locked; no execution adapter | Remains out of the public evaluation build |

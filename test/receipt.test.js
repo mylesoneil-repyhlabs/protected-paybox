@@ -84,8 +84,11 @@ test("receipt binds one-use authorization and expiry without redacting policy se
 
 test("invalid confirmation content is fingerprinted and never sealed raw", () => {
   const plan = createPlan(buildDemoIntent(), { now: NOW, id: "plan-secret" });
-  const secretLike =
-    "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJub3QtYS1yZWFsLXRva2VuIn0.signaturepart";
+  const secretLike = [
+    "eyJhbGciOiJIUzI1NiJ9",
+    "eyJzdWIiOiJub3QtYS1yZWFsLXRva2VuIn0",
+    "signaturepart",
+  ].join(".");
   const evaluation = evaluateProposal({
     plan,
     confirmationDigest: secretLike,

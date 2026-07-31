@@ -1,6 +1,6 @@
 {
   "name": "protected-paybox",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Mandate-gated PayBox on-chain swap simulation and conformance prototype.",
   "private": true,
   "type": "module",
@@ -15,6 +15,11 @@
     "verify": "node src/cli.js verify",
     "inspect-tools": "node src/cli.js inspect-tools",
     "test": "node --test test/*.test.js",
-    "check:skill": "node scripts/validate-skill.mjs"
+    "check:skill": "node scripts/validate-skill.mjs",
+    "check:links": "node scripts/check-local-links.mjs",
+    "check:release": "node scripts/validate-release-metadata.mjs",
+    "check:content": "node scripts/scan-release-content.mjs . --source-tree",
+    "conformance:hook": "node --test test/paybox-hook-contract.test.js",
+    "release:bundle": "bash scripts/build-release-bundle.sh HEAD"
   }
 }

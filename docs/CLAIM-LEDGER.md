@@ -1,13 +1,16 @@
 # Protected PayBox claim ledger
 
-Status: current repository truth
+Status: current source-tree truth
 Date: 2026-07-30
 
 ## Status vocabulary
 
-- `VERIFIED_CURRENT`: directly evidenced by the current checked-in repository.
+- `VERIFIED_CURRENT`: directly evidenced by the current source tree and the
+  verification runs recorded below.
 - `EXTERNAL_SOURCE`: stated by a cited primary external source, not verified
   through the current implementation.
+- `PENDING_VERIFICATION`: implementation exists, but a required release or
+  independent-review gate has not run.
 - `DESIGN_TARGET`: approved requirement, not implemented.
 - `UNKNOWN`: must be discovered or tested.
 - `LOCKED`: deliberately unavailable in the public build.
@@ -18,7 +21,7 @@ Date: 2026-07-30
 | --- | --- | --- | --- |
 | A Protected PayBox fixture prototype exists | `VERIFIED_CURRENT` | Skill, runner, CLI, deterministic evaluator, local checksum records, tests, and current README | "Protected PayBox is an independent, credential-free Delta simulation prototype." |
 | A completed Sprint 1 skill exists | `VERIFIED_CURRENT` | `skills/protected-paybox/SKILL.md` and skill validation | "The skill guides one strict Solana USDC-to-SOL fixture flow." |
-| A complete fixture guard flow exists | `VERIFIED_CURRENT` | `plan`, `demo`, `simulate`, `verify`; v0.2 direct pre-installer 104/104 test run | "One labeled transaction-shaped fixture can be compiled, evaluated, and locally checksum-verified end to end." |
+| A complete fixture guard flow exists | `VERIFIED_CURRENT` | `plan`, `demo`, `simulate`, `verify`; current 133/133 full-suite run | "One labeled transaction-shaped fixture can be compiled, evaluated, and locally checksum-verified end to end." |
 | The current build evaluates exact fixture proposals | `VERIFIED_CURRENT` | Closed evidence normalizer and deterministic evaluator | "Complete local fixture evidence returns PASS, BLOCK, or REVIEW." |
 | A strict custom 25 USDC fixture is supported | `VERIFIED_CURRENT` | `plan --intent` creates a saved plan and displayed digest; `demo --plan ... --confirm-policy ...`; CLI tests | "The current custom example evaluates exactly 25 USDC for at least 0.18 SOL under its stated synthetic limits after the saved plan and exact digest are supplied." |
 | The CLI authenticates who authored the chat confirmation | `LOCKED` | The CLI compares only the supplied digest; no authenticated chat identity is available | "The CLI proves digest equality, not who supplied it." |
@@ -27,13 +30,20 @@ Date: 2026-07-30
 | Full evidence is bound to the nonce | `VERIFIED_CURRENT` | Semantic digest includes complete evidence; quote/reference/simulation/timestamp mutation tests | "A nonce cannot replay different evidence semantics." |
 | Stale or expired state cannot replay PASS | `VERIFIED_CURRENT` | Re-evaluation-before-history and dedicated stale/expired tests | "Only an exact, still-current retry may reuse its stored result." |
 | Cross-process once-write is atomic | `VERIFIED_CURRENT` | Owner-only temporary file plus hard-link claim; worker-process test | "Concurrent processes converge on one durable nonce record." |
-| A one-use policy cannot PASS under a second nonce | `VERIFIED_CURRENT` | Canonical policy-use claim in the fixed private runtime; CLI and preflight tests | "After one PASS, the same policy returns BLOCK/PLAN_ALREADY_USED under another nonce." |
+| A one-use policy cannot PASS under a second nonce | `VERIFIED_CURRENT` | Canonical policy-use claim in fixed private state; CLI, preflight, and cross-version installer tests | "After one PASS, the same policy returns BLOCK/PLAN_ALREADY_USED under another nonce, including after a verified upgrade." |
 | Caller-selected history can redirect one-use state | `LOCKED` | The CLI has no `--history` option | "One-use state is kept in the canonical private runtime." |
-| The v0.2 direct pre-installer suite is green | `VERIFIED_CURRENT` | Direct Node run on 2026-07-30 | "104/104 v0.2 pre-installer tests pass." |
+| The v0.3.0 source suite is green | `VERIFIED_CURRENT` | Full Node run on 2026-07-30 | "133/133 source-tree tests pass." |
+| A managed installer exists | `VERIFIED_CURRENT` | 17/17 installer tests; versioned owner-only copy, separate stable owner-only state, exact SHA-256 manifest, restricted-`PATH` discovery, idempotency, explicit integrity-checked upgrade, cross-version replay, ancestor-symlink rejection, and source-deletion checks | "The local package installs an integrity-checked private managed copy that remains usable after the extracted source is removed; stable replay state survives upgrade, and the unkeyed manifest is not publisher authentication." |
+| An allowlisted release pipeline exists | `VERIFIED_CURRENT` | Immutable GitHub Actions SHAs, metadata/link/content validators, allowlisted archive builder, checksum generator, and cold-install validator are present; skill, links, metadata, and source-content checks pass | "The repository contains pinned CI actions plus same-commit/same-toolchain archive-repeatability and cold-install validation scripts." |
+| A committed release archive has passed the release gate | `PENDING_VERIFICATION` | No committed-ref archive or independent Mini-sprint 3 run is recorded yet | "Release archive verification remains pending." |
 | The current build has PayBox OAuth integration | `LOCKED` | No OAuth client or session exists | "PayBox has not been connected from this repository." |
 | An offline PayBox tool-surface inspector exists | `VERIFIED_CURRENT` | `inspect-tools`, bounded parser, risk classifier, redacted deterministic snapshot, CLI and module tests | "Protected PayBox can conservatively analyze a saved tools/list capture offline; it does not contact or authenticate PayBox." |
 | The PayBox MCP tool surface has been captured here | `UNKNOWN` | No authenticated contract artifact exists in this repository | "Authenticated tool discovery remains a future live-integration gate." |
 | A Solana evidence contract is documented | `VERIFIED_CURRENT` | `docs/SOLANA-EVIDENCE-CONTRACT.md` separates fixture profile `F1` from proposed live profile `L1` | "The repository specifies the fields, bindings, sources, authenticity limits, and PayBox questions required for a future live preflight." |
+| A signing-hook conformance hypothesis exists | `VERIFIED_CURRENT` | Closed JSON schema, pure local normalizer/verifier/one-process consumer, always-locked production composition, and 10/10 targeted tests | "The local conformance kit models exact field binding, semantic limits, audience, expiry, and one-process replay behavior for a proposed PayBox hook." |
+| Release content is scanned for credential forms | `VERIFIED_CURRENT` | 2/2 targeted scanner tests and passing source-content scan | "The release scanner rejects OAuth access, refresh and session tokens, client-secret forms, and other configured secret patterns." |
+| The signing-hook claim is cryptographically authenticated or provider-backed | `LOCKED` | The claim kind explicitly says it is not a cryptographic grant; no issuer proof, PayBox response, Delta proof, credential, or network adapter exists | "The signing-hook asset is an unauthenticated local interface hypothesis only." |
+| The local signing-hook replay consumer is durable or distributed | `LOCKED` | It uses an in-memory set and resets with the process | "The local consumer demonstrates only same-process sequential and concurrent one-use behavior." |
 | The current build reads PayBox wallet data | `LOCKED` | No adapter exists | "No PayBox wallet or account data is read." |
 | The current build obtains live quotes or chain data | `LOCKED` | No adapter exists | "No external market, route, RPC, or chain data is used." |
 | The current build runs a live-chain simulation | `LOCKED` | Only labeled simulation-shaped fixture facts exist | "No Solana RPC or venue simulation is performed." |
@@ -76,7 +86,7 @@ evidence for Protected PayBox.
 
 ## Release wording
 
-### Current v0.2 wording
+### Current v0.3.0 source-tree wording
 
 > Protected PayBox provides a credential-free, labeled simulation of one
 > strict Solana Mainnet USDC-to-SOL swap mandate. It uses transaction-shaped
@@ -85,7 +95,10 @@ evidence for Protected PayBox.
 > a saved MCP tools/list capture offline and documents the evidence PayBox
 > would need to expose before a live preflight. PayBox, production Delta,
 > Swaps.xyz, Solana, and other networks are not contacted. No signature or
-> transaction can be produced.
+> transaction can be produced. A local conformance kit models the exact
+> contract a future mandatory PayBox signing hook would need to validate, but
+> it is not a cryptographic grant, provider integration, or enforcement
+> boundary.
 
 Current evidence:
 
@@ -98,14 +111,24 @@ Current evidence:
 - atomic cross-process once-write and canonical one-use policy consumption;
 - offline `inspect-tools` CLI and conservative classifier;
 - `SOLANA-EVIDENCE-CONTRACT.md`;
-- v0.2 direct pre-installer 104/104 green test run;
+- private versioned managed installer with exact file-digest manifest,
+  restricted-`PATH` runtime discovery, idempotency, verified explicit upgrade,
+  source-deletion durability, and separate product-level replay state that
+  survives an upgrade;
+- pure local signing-hook contract and always-locked production composition;
+- 133/133 full-suite, 17/17 installer, 10/10 signing-hook, and 2/2
+  release-content scanner test runs;
+- passing skill, link, metadata, and source-content checks;
 - current-only README.
 
 The checksum is unkeyed. An active editor can change a record and recompute
 it, so it is not a Delta signature, provider-authenticity proof, or
 adversarial tamper protection. The CLI compares a confirmation digest but
 cannot authenticate chat authorship. The skill can be bypassed if another
-PayBox mutation tool remains available.
+PayBox mutation tool remains available. The same-commit/same-toolchain archive
+repeatability scripts are implemented, but a committed release archive and
+independent Mini-sprint 3 review have not yet passed, so no GitHub release is
+claimed.
 
 ### Future live-preflight candidate wording
 
@@ -124,22 +147,33 @@ Required evidence before this wording is allowed:
 - no reachable mutation;
 - full deferred live-preflight gate.
 
-### Sprint 3 candidate wording
+### Current signing-hook wording
 
 > Protected PayBox includes a conformance kit that demonstrates the exact
-> proof and one-use-grant checks PayBox would need at its signing boundary.
+> field, semantic, expiry, and local one-use checks PayBox would need at its
+> signing boundary.
 > The public package remains non-signing and does not claim a live PayBox or
 > production Delta integration.
 
-Required evidence:
+Implemented evidence:
 
 - managed installer and allowlisted release manifest;
-- deterministic archive/checksum and restricted-`PATH` cold-install checks;
-- conformance contract and test server;
-- proof mismatch, expiry, wallet/client mismatch, replay, concurrency, restart,
-  revocation, and uncertain-submission tests;
-- full Sprint 3 release gate;
-- partner responsibility model.
+- exact per-file SHA-256 verification and restricted-`PATH` install tests;
+- closed conformance contract and pure local verifier;
+- mutation, semantic-bound, audience, expiry, sequential-replay, and
+  same-process concurrency tests;
+- always-locked production composition; and
+- explicit partner responsibility and deferred production gates.
+
+Still required before release or enforcement wording:
+
+- committed deterministic archive/checksum validation;
+- independent Mini-sprint 3 review and later GitHub artifact re-download;
+- cryptographic issuer proof and provider-authenticated reconstruction;
+- durable cross-process and cross-region consumption;
+- restart, revocation, recovery, and uncertain-submission conformance against
+  an actual PayBox sandbox; and
+- a mandatory PayBox hook with no raw mutation bypass.
 
 ## Permanently prohibited without new evidence
 

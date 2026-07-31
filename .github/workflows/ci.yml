@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        node:
+          - 22
+          - 24
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+
+      - name: Install Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Run complete test suite
+        run: npm test
+
+      - name: Verify locked runtime state
+        run: npm run doctor
+
+      - name: Validate installable skill
+        run: npm run check:skill
+
+      - name: Check local documentation links
+        run: npm run check:links
+
+      - name: Validate release metadata
+        run: npm run check:release
+
+      - name: Scan release content
+        run: npm run check:content
+
+      - name: Smoke test versioned managed install
+        env:
+          CODEX_HOME: ${{ runner.temp }}/protected-paybox-codex-home
+          XDG_DATA_HOME: ${{ runner.temp }}/protected-paybox-data
+        run: |
+          ./install
+          "$CODEX_HOME/skills/protected-paybox/scripts/run" doctor
+
+  release-bundle:
+    name: Deterministic cold-install bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: test
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+        with:
+          fetch-depth: 0
+
+      - name: Install Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+
+      - name: Build and cold-validate committed release
+        run: npm run release:bundle
