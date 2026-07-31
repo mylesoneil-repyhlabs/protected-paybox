@@ -121,7 +121,7 @@ for trusted_script in \
   "scripts/build-release-bundle.sh" \
   "scripts/scan-release-content.mjs" \
   "scripts/validate-release-bundle.sh"; do
-  committed_copy="$BUILD_DIRECTORY/$(basename "$trusted_script").committed"
+  committed_copy="$BUILD_DIRECTORY/committed-$(basename "$trusted_script")"
   git -C "$REPOSITORY_ROOT" show \
     "$RELEASE_COMMIT:$trusted_script" > "$committed_copy"
   if ! cmp -s "$REPOSITORY_ROOT/$trusted_script" "$committed_copy"; then
@@ -129,7 +129,7 @@ for trusted_script in \
     exit 1
   fi
 done
-COMMITTED_SCANNER="$BUILD_DIRECTORY/scan-release-content.mjs.committed"
+COMMITTED_SCANNER="$BUILD_DIRECTORY/committed-scan-release-content.mjs"
 
 git -C "$REPOSITORY_ROOT" archive \
   --format=zip \
