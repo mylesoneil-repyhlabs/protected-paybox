@@ -1,7 +1,7 @@
 # Protected PayBox sprint log
 
-Status: Sprint 1 through Mini-sprint 2 complete; Sprint 3 implementation
-complete; committed archive verification and Mini-sprint 3 pending
+Status: Sprint 1 through Sprint 3 local implementation and QA complete;
+GitHub publication and independent re-download verification pending
 Date: 2026-07-30
 
 This log records implemented work and verified gates. Planned work is labeled
@@ -43,9 +43,9 @@ Verified current state:
 - the production composition always throws `PUBLIC_EXECUTION_LOCKED` before
   inspecting its argument;
 - skill, local-link, release-metadata, and source-content checks pass;
-- same-commit/same-toolchain archive-repeatability and cold-install scripts
-  exist, but no committed archive or independent Mini-sprint 3 verdict is yet
-  recorded;
+- the committed-source archive passes same-commit/same-toolchain
+  byte-repeatability, all 133 extracted tests, restricted-`PATH` cold install,
+  source deletion, installed behavior, and independent release review;
 - README describes the current simulation-only product and no prior-version
   narrative;
 - no PayBox OAuth connection or authenticated tool inventory exists in this
@@ -351,8 +351,8 @@ satisfy this gate.
 ## Sprint 3 — managed partner release and PayBox signing-boundary conformance
 kit
 
-State: implementation complete in the source tree; release verification
-pending
+State: local implementation, committed-archive validation, and independent
+review complete; GitHub publication and re-download pending
 Target release: `v0.3.0`
 
 ### PM requirement
@@ -384,10 +384,12 @@ enforce before signing, while keeping the public package non-signing.
 - Designer/front-end kept install state, fixture evidence, local hook
   hypothesis, and locked execution visibly distinct.
 - QA specialist verified 133/133 full-suite tests, 17/17 installer tests, 10/10
-  signing-hook tests, and 2/2 release-content scanner tests. Independent
-  Mini-sprint 3 review remains pending.
-- Target persona review is scheduled for Mini-sprint 3; no direct external
-  interview is claimed.
+  signing-hook tests, and 2/2 release-content scanner tests in both the source
+  candidate and committed archive.
+- An internal target-persona walkthrough found the explicit mandate and
+  no-PayBox-contact boundary reassuring and clear. It also found the exact
+  digest confirmation too technical for finished consumer UX but appropriate
+  for a partner-evaluation asset. No direct external interview is claimed.
 
 ### Implemented results
 
@@ -414,8 +416,10 @@ enforce before signing, while keeping the public package non-signing.
 - Every local hook result discloses `local_only: true`, `durable: false`, and
   `cryptographic_grant_verified: false`.
 - The production composition remains unconditionally locked.
-- Release and CI scripts exist; committed-ref archive execution is not yet
-  claimed.
+- The committed archive passed byte-repeatability, local checksum, allowlisted
+  content, full extracted tests, restricted-`PATH` cold install,
+  source-deletion durability, installed demo/inspection, and execution-lock
+  checks.
 
 ### Sprint 3 release gate
 
@@ -437,10 +441,10 @@ enforce before signing, while keeping the public package non-signing.
 - [x] No production Delta, PayBox-native enforcement, liability, or mainnet
       protection claim appears.
 - [x] Source-tree tests and skill/link/metadata/content checks pass.
-- [ ] Archive checksum, allowlisted manifest, installed behavior, tag, and
-      independently downloaded GitHub asset agree.
-- [ ] Documentation, README, package, tests, committed archive, and GitHub
-      release agree.
+- [x] Local archive checksum, allowlisted manifest, installed behavior, and
+      committed source agree.
+- [x] Documentation, README, package, tests, and committed archive agree.
+- [ ] GitHub tag, release asset, independent download, and checksum agree.
 
 Durable or distributed grant consumption, cryptographic issuer verification,
 PayBox client binding, restart persistence, revocation, ambiguous-broadcast
@@ -449,23 +453,26 @@ They are not implemented or claimed by the local simulator.
 
 ### Mini-sprint 3
 
-State: pending
+State: local gates complete; GitHub publication and re-download pending
 
-Remaining gates:
+Completed:
 
-1. Commit the exact candidate and build the archive twice from that commit
+1. Committed the exact candidate and built the archive twice from that commit
    under the same toolchain.
-2. Independently audit installer path, permission, manifest, symlink,
+2. Independently audited installer path, permission, manifest, symlink,
    idempotency, upgrade, and source-deletion behavior.
-3. Re-run the complete suite and skill/link/metadata/content checks.
-4. Cold-install the archive with a restricted `PATH`; remove the extracted
-   source; rerun doctor, fixture demo, offline inspection, and execution-lock
+3. Re-ran the complete suite and skill/link/metadata/content checks.
+4. Cold-installed the archive with a restricted `PATH`; removed the extracted
+   source; reran doctor, fixture demo, offline inspection, and execution-lock
    checks through the installed skill.
-5. Independently verify that the hook cannot be mistaken for an authenticated
+5. Independently verified that the hook cannot be mistaken for an authenticated
    Delta proof, provider response, durable replay store, or PayBox
    enforcement.
-6. Reconcile final public claims and complete persona review.
-7. Publish the matching GitHub tag and asset, then independently download,
+6. Reconciled public claims and completed internal persona review.
+
+Remaining external gate:
+
+1. Publish the matching GitHub tag and asset, then independently download,
    checksum, install, and exercise that exact asset.
 
 ## Stopping point

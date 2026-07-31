@@ -1,7 +1,7 @@
 # Protected PayBox security boundary
 
-Status: v0.3.0 source implementation complete; live execution locked;
-committed archive and independent Mini-sprint 3 verification pending
+Status: v0.3.0 local release gates complete; live execution locked;
+GitHub publication and independent re-download verification pending
 Date: 2026-07-30
 
 ## Current boundary
@@ -409,14 +409,14 @@ Implemented and currently passing or directly validated in the source tree:
 - source deletion followed by an installed doctor check;
 - README, security boundary, claim ledger, and shipped behavior comparison.
 
-Still pending before the v0.3.0 release gate can be marked complete:
+The exact committed source has also passed same-commit/same-toolchain
+byte-repeatability, archive content scanning, all 133 extracted tests,
+restricted-`PATH` cold install, source deletion, installed behavior, and
+independent security/release review.
 
-- build the archive twice from the exact committed source under the same
-  toolchain and compare bytes;
-- cold-validate that committed archive and generate its checksum;
-- complete independent Mini-sprint 3 security, installer, persona, and
-  claim-accuracy review;
-- publish the matching tag and asset; and
+Still pending before the external release gate can be marked complete:
+
+- publish the matching GitHub tag and asset; and
 - independently re-download the GitHub asset and verify its checksum and
   installed behavior.
 

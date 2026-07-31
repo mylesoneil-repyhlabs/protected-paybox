@@ -1,7 +1,7 @@
 # Protected PayBox project plan
 
-Status: Sprint 1 through Mini-sprint 2 complete; Sprint 3 implementation
-complete; committed archive verification and Mini-sprint 3 pending
+Status: Sprint 1 through Sprint 3 local implementation and QA complete;
+GitHub publication and independent re-download verification pending
 Date: 2026-07-30
 Owner: delta product and engineering
 Target repository: personal GitHub, separate from Coinbase Guard
@@ -54,9 +54,9 @@ The current source tree passes 133/133 full-suite tests, including 17/17
 managed-installer tests, 10/10 local signing-hook tests, and 2/2
 release-content scanner tests. Skill, local-link,
 release-metadata, and source-content checks also pass. The same-commit,
-same-toolchain archive-repeatability builder and cold-install validator exist,
-but a committed-ref archive and independent Mini-sprint 3 review have not yet
-run.
+same-toolchain committed archive passes byte-repeatability, full extracted
+tests, restricted-`PATH` cold install, source deletion, installed behavior,
+and independent security/release review.
 
 PayBox has not been contacted. No authenticated `tools/list`, OAuth session,
 wallet, quote, chain state, venue response, or network simulation has been
@@ -592,8 +592,8 @@ merely because `inspect-tools` accepts a saved capture. It still requires:
 ## Sprint 3: installable partner release and signing-boundary conformance kit
 
 Release target: `v0.3.0`
-State: implementation complete in the source tree; release verification and
-Mini-sprint 3 pending
+State: local implementation, committed-archive validation, and independent
+Mini-sprint 3 review complete; GitHub publication and re-download pending
 
 Sprint 3 does not enable public signing. It packages the prototype
 reproducibly and turns the evidence contract into the asset used to pitch a
@@ -621,10 +621,11 @@ native PayBox integration.
   execution visibly distinct in the README and ordinary output.
 - QA: brought the full source suite to 133/133, including 17/17 managed
   installer tests, 10/10 local signing-hook tests, and 2/2 release-content
-  scanner tests.
-- Persona: the current journey preserves one policy authorization followed by
-  deterministic evaluation; direct external target-user feedback is not
-  claimed.
+  scanner tests; the same suite passes from the committed archive.
+- Persona: an internal target-persona walkthrough found the mandate and
+  no-execution boundary clear, while identifying the exact-digest confirmation
+  as appropriate for a partner asset rather than finished consumer UX. Direct
+  external target-user feedback is not claimed.
 
 ### Required future native handshake
 
@@ -659,11 +660,14 @@ native PayBox integration.
 - [x] Production Delta proof, PayBox-native enforcement, liability assignment,
       and mainnet protection remain unclaimed.
 - [x] Current source-tree tests and skill/link/metadata/content checks pass.
-- [ ] Build and cold-validate the same-commit/same-toolchain archive from the
+- [x] Build and cold-validate the same-commit/same-toolchain archive from the
       committed `v0.3.0` source.
-- [ ] Verify the archive checksum, allowlisted contents, installed behavior,
-      tag, and independently downloaded GitHub asset agree.
-- [ ] Complete independent Mini-sprint 3 security, release, and persona QA.
+- [x] Verify the local archive checksum, allowlisted contents, installed
+      behavior, and execution lock agree.
+- [x] Complete independent Mini-sprint 3 security, release, and internal
+      persona QA.
+- [ ] Verify the GitHub tag and independently downloaded release asset agree
+      with the final committed source and checksum.
 
 Durable or distributed grant consumption, authenticated issuer proof, PayBox
 client binding, revocation, restart persistence, ambiguous-broadcast recovery,
@@ -672,23 +676,26 @@ the local conformance simulator.
 
 ### Sprint 3 mini-sprint
 
-State: pending
+State: local gates complete; GitHub publication and re-download pending
 
-Required work:
+Completed local work:
 
-1. Commit the exact candidate source and build the archive from that commit.
-2. Independently inspect installer paths, permissions, symlink rejection,
+1. Committed the exact candidate source and built the archive from that commit.
+2. Independently inspected installer paths, permissions, symlink rejection,
    manifest verification, explicit upgrade, and source-deletion durability.
-3. Re-run 133/133 tests and all skill/link/metadata/content checks from the
+3. Re-ran 133/133 tests and all skill/link/metadata/content checks from the
    candidate.
-4. Cold-install the archive under a restricted `PATH`, delete the extracted
-   source, and rerun doctor, fixture demo, offline inspector, and execution
+4. Cold-installed the archive under a restricted `PATH`, deleted the extracted
+   source, and reran doctor, fixture demo, offline inspector, and execution
    lock from the managed copy.
-5. Confirm the hook artifact cannot be confused with a cryptographic grant,
+5. Confirmed the hook artifact cannot be confused with a cryptographic grant,
    provider response, durable replay store, or live integration.
-6. Reconcile README and all claim/security documents to final evidence.
-7. After publication, independently download the GitHub asset and verify its
-   checksum and behavior before marking the sprint complete.
+6. Reconciled README and all claim/security documents to current evidence.
+
+Remaining external gate:
+
+1. Publish the matching tag and asset, then independently download the GitHub
+   asset and verify its checksum and behavior.
 
 ## Good stopping point
 

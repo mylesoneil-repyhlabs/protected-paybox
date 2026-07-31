@@ -244,10 +244,12 @@ Run the local signing-hook subset directly with:
 npm run conformance:hook
 ```
 
-The same-commit, same-toolchain archive repeatability and cold-install
-validation scripts are present, but a committed archive and independent
-Mini-sprint 3 release review have not yet been completed. No GitHub release or
-independently downloaded artifact is claimed here.
+The committed-source archive has also passed same-commit, same-toolchain
+byte-repeatability, credential scanning, all 133 tests from the extracted
+archive, restricted-`PATH` cold install, source deletion, installed demo and
+offline-inspector checks, and the public execution lock. Independent security
+and release audits found no remaining local release blocker. No independently
+downloaded GitHub artifact is claimed here.
 
 ## Documentation
 
