@@ -91,12 +91,12 @@ export function buildDemoEvidence(
     schema_version: "protected-paybox.fixture-solana-message.v1",
     version: "v0",
     fee_payer: policy.authority.wallet_account,
-    recent_blockhash: "FixtureBlockhash111111111111111111111111111",
+    recent_blockhash: SOLANA_PROFILE.fixture_recent_blockhash,
     last_valid_block_height: "29000150",
     required_signers: [policy.authority.wallet_account],
     address_lookup_tables: [
       {
-        table_account: "AddressTable111111111111111111111111111111",
+        table_account: SOLANA_PROFILE.fixture_lookup_table,
         resolved: true,
         resolved_at_slot: "290000000",
         table_data_sha256: digest("fixture-address-table"),

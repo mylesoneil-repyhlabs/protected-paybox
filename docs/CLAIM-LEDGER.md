@@ -1,6 +1,6 @@
 # Protected PayBox claim ledger
 
-Status: current repository truth  
+Status: current repository truth
 Date: 2026-07-30
 
 ## Status vocabulary
@@ -16,22 +16,31 @@ Date: 2026-07-30
 
 | Claim | Status | Current evidence | Allowed wording |
 | --- | --- | --- | --- |
-| A Protected PayBox repository exists | `VERIFIED_CURRENT` | Local Git repository and scaffold | "Protected PayBox is being designed as a separate partner prototype." |
-| A completed Protected PayBox skill exists | `UNKNOWN` | Current `SKILL.md` is an unimplemented scaffold with TODOs | "The skill workflow is not implemented yet." |
-| Project plan and security requirements exist | `VERIFIED_CURRENT` | Files under `docs/` | "The initial scope, sprint gates, and security boundary are documented." |
-| Partial deterministic planning modules exist | `VERIFIED_CURRENT` | Package, launcher, canonical/decimal/validation/constants/policy modules | "Closed Solana intent validation and policy-plan construction are partially implemented." |
-| A complete executable guard flow exists | `LOCKED` | CLI, proposal/evidence/simulation/decision/receipt pipeline and tests are incomplete | "No end-to-end protected flow is currently runnable." |
-| The current build evaluates proposals | `LOCKED` | No evidence, proposal, simulation, or decision engine exists | "No candidate currently receives PASS, BLOCK, or REVIEW." |
+| A Protected PayBox fixture prototype exists | `VERIFIED_CURRENT` | Skill, runner, CLI, deterministic evaluator, local checksum records, tests, and current README | "Protected PayBox is an independent, credential-free Delta simulation prototype." |
+| A completed Sprint 1 skill exists | `VERIFIED_CURRENT` | `skills/protected-paybox/SKILL.md` and skill validation | "The skill guides one strict Solana USDC-to-SOL fixture flow." |
+| A complete fixture guard flow exists | `VERIFIED_CURRENT` | `plan`, `demo`, `simulate`, `verify`; v0.2 direct pre-installer 104/104 test run | "One labeled transaction-shaped fixture can be compiled, evaluated, and locally checksum-verified end to end." |
+| The current build evaluates exact fixture proposals | `VERIFIED_CURRENT` | Closed evidence normalizer and deterministic evaluator | "Complete local fixture evidence returns PASS, BLOCK, or REVIEW." |
+| A strict custom 25 USDC fixture is supported | `VERIFIED_CURRENT` | `plan --intent` creates a saved plan and displayed digest; `demo --plan ... --confirm-policy ...`; CLI tests | "The current custom example evaluates exactly 25 USDC for at least 0.18 SOL under its stated synthetic limits after the saved plan and exact digest are supplied." |
+| The CLI authenticates who authored the chat confirmation | `LOCKED` | The CLI compares only the supplied digest; no authenticated chat identity is available | "The CLI proves digest equality, not who supplied it." |
+| A skill alone makes the flow bypass-resistant | `LOCKED` | A skill cannot remove or gate another connected PayBox tool | "Bypass resistance requires enforcement inside the PayBox signing boundary or an exclusive protected proxy." |
+| Exact decoded operations are bound | `VERIFIED_CURRENT` | Canonical message-byte comparison and exact builder/asset/amount/minimum/recipient/priority-fee tests | "Changing the decoded operation or bound message bytes prevents PASS." |
+| Full evidence is bound to the nonce | `VERIFIED_CURRENT` | Semantic digest includes complete evidence; quote/reference/simulation/timestamp mutation tests | "A nonce cannot replay different evidence semantics." |
+| Stale or expired state cannot replay PASS | `VERIFIED_CURRENT` | Re-evaluation-before-history and dedicated stale/expired tests | "Only an exact, still-current retry may reuse its stored result." |
+| Cross-process once-write is atomic | `VERIFIED_CURRENT` | Owner-only temporary file plus hard-link claim; worker-process test | "Concurrent processes converge on one durable nonce record." |
+| A one-use policy cannot PASS under a second nonce | `VERIFIED_CURRENT` | Canonical policy-use claim in the fixed private runtime; CLI and preflight tests | "After one PASS, the same policy returns BLOCK/PLAN_ALREADY_USED under another nonce." |
+| Caller-selected history can redirect one-use state | `LOCKED` | The CLI has no `--history` option | "One-use state is kept in the canonical private runtime." |
+| The v0.2 direct pre-installer suite is green | `VERIFIED_CURRENT` | Direct Node run on 2026-07-30 | "104/104 v0.2 pre-installer tests pass." |
 | The current build has PayBox OAuth integration | `LOCKED` | No OAuth client or session exists | "PayBox has not been connected from this repository." |
-| The PayBox MCP tool surface has been captured here | `UNKNOWN` | No authenticated contract artifact exists in this repository | "Authenticated tool discovery is a Sprint 1 gate." |
+| An offline PayBox tool-surface inspector exists | `VERIFIED_CURRENT` | `inspect-tools`, bounded parser, risk classifier, redacted deterministic snapshot, CLI and module tests | "Protected PayBox can conservatively analyze a saved tools/list capture offline; it does not contact or authenticate PayBox." |
+| The PayBox MCP tool surface has been captured here | `UNKNOWN` | No authenticated contract artifact exists in this repository | "Authenticated tool discovery remains a future live-integration gate." |
+| A Solana evidence contract is documented | `VERIFIED_CURRENT` | `docs/SOLANA-EVIDENCE-CONTRACT.md` separates fixture profile `F1` from proposed live profile `L1` | "The repository specifies the fields, bindings, sources, authenticity limits, and PayBox questions required for a future live preflight." |
 | The current build reads PayBox wallet data | `LOCKED` | No adapter exists | "No PayBox wallet or account data is read." |
 | The current build obtains live quotes or chain data | `LOCKED` | No adapter exists | "No external market, route, RPC, or chain data is used." |
-| The current build simulates transactions | `LOCKED` | No simulator exists | "No transaction simulation is currently implemented." |
-| The current build returns `PASS`, `BLOCK`, or `REVIEW` | `DESIGN_TARGET` | Constants and requirements exist; decision pipeline does not | "The planned decision model is PASS/BLOCK/REVIEW." |
-| The current build creates a receipt | `LOCKED` | No receipt implementation exists | "No receipt is currently created." |
-| The current build signs or broadcasts | `LOCKED` | No runtime or signing adapter exists | "Nothing can be signed, broadcast, or moved." |
+| The current build runs a live-chain simulation | `LOCKED` | Only labeled simulation-shaped fixture facts exist | "No Solana RPC or venue simulation is performed." |
+| The current build creates a local checksum record | `VERIFIED_CURRENT` | Record creation, checksum verification, unrehashed-mutation, and disclaimer tests | "Every supported outcome has an unkeyed SHA-256 local self-consistency checksum." |
+| The local checksum prevents an active editor from rewriting a record | `LOCKED` | SHA-256 is unkeyed; an editor can recompute the record and binding digests | "The checksum detects accidental or unrehashed mutation; it is not a signature, authenticity proof, or adversarial tamper protection." |
+| The current build signs or broadcasts | `LOCKED` | Runtime CLI lock and test; no PayBox/network adapter | "Nothing can be signed, broadcast, or moved." |
 | The current build integrates production Delta | `LOCKED` | No Delta adapter exists | "Production Delta is not integrated." |
-| A skill alone prevents raw PayBox bypass | `LOCKED` | A skill cannot remove other connected tools | "True enforcement requires a PayBox signing-boundary hook or exclusive protected proxy." |
 | Protected PayBox currently provides a Mandate Guarantee | `LOCKED` | No production Delta or PayBox enforcement | "Protected PayBox is not currently a Mandate Guarantee." |
 
 ## External PayBox facts
@@ -56,36 +65,49 @@ evidence for Protected PayBox.
 
 | Claim | Status | Evidence or gate | Allowed wording |
 | --- | --- | --- | --- |
-| Solana is the selected implementation chain | `DESIGN_TARGET` | Preferred because it best matches PayBox launch emphasis; subject to authenticated visibility gate | "Solana is the primary candidate." |
-| Protected PayBox supports Solana swaps | `LOCKED` | A fixed USDC-to-SOL policy profile is partial; no complete compiler, adapter, decoder, quote, simulator, or decision exists | "The first planned profile is one USDC-to-SOL swap." |
+| Solana is the selected fixture chain | `VERIFIED_CURRENT` | Fixed mainnet genesis reference and closed CAIP-19 asset profile | "Sprint 1 supports one strict Solana Mainnet fixture profile." |
+| Protected PayBox supports Solana swaps | `VERIFIED_CURRENT` | Strict USDC-to-SOL fixture compiler/evaluator only | "Protected PayBox supports one labeled Solana USDC-to-SOL fixture; it does not support a live swap." |
 | Protected PayBox supports EVM swaps | `LOCKED` | Fallback design only | "EVM is the fallback if it provides materially better pre-sign visibility." |
-| Protected PayBox supports any AMM | `LOCKED` | No venue is selected | "Only one fully verified route may enter initial scope." |
-| Protected PayBox supports all tokens | `LOCKED` | No runtime token validation exists | "No static token-count or generic-token claim is permitted." |
+| Protected PayBox supports any live AMM | `LOCKED` | Swaps.xyz-shaped data is an explicit local fixture; PayBox routing is unknown | "The fixture shape is not evidence that PayBox uses Swaps.xyz." |
+| Protected PayBox supports all tokens | `LOCKED` | Runtime accepts only exact fixed USDC and SOL identities | "No static token-count or generic-token claim is permitted." |
 | Protected PayBox supports prediction markets | `LOCKED` | Deferred taxonomy | "Prediction markets are an expansion candidate after the swap path is proven." |
 | Protected PayBox supports lending, perps, or tokenized equities | `LOCKED` | Deferred taxonomy and evidence work | Do not use current-capability language |
 | Protected PayBox supports x402 or ecommerce | `LOCKED` | Service/item-delivery evidence is not designed | Do not use current-capability language |
 
-## Planned release claims
+## Release wording
 
-These phrases become usable only after the matching release gate passes.
-
-### Sprint 1 candidate wording
+### Current v0.2 wording
 
 > Protected PayBox provides a credential-free, labeled simulation of one
-> conditional on-chain swap mandate. It uses local fixtures and deterministic
-> checks to return PASS, BLOCK, or REVIEW with a locally verifiable
-> tamper-evident receipt. PayBox, production Delta, and the chain are not
-> contacted. No signature or transaction can be produced.
+> strict Solana Mainnet USDC-to-SOL swap mandate. It uses transaction-shaped
+> local fixtures and deterministic checks to return PASS, BLOCK, or REVIEW
+> with an unkeyed SHA-256 local self-consistency checksum. It can also classify
+> a saved MCP tools/list capture offline and documents the evidence PayBox
+> would need to expose before a live preflight. PayBox, production Delta,
+> Swaps.xyz, Solana, and other networks are not contacted. No signature or
+> transaction can be produced.
 
-Required evidence:
+Current evidence:
 
-- implemented compiler, policy, proposer, decisions, receipt, nonce/history,
-  tests, installer, and skill;
-- authenticated `tools/list` captured separately without a mutation;
-- full Sprint 1 release gate;
-- README and release assets match the claim.
+- skill, runner, CLI, compiler, policy, fixture builder, evidence normalizer,
+  decisions, receipt, nonce/history, report, and validation modules;
+- strict 25 USDC custom fixture through a saved plan and exact displayed
+  digest;
+- exact decoded-operation and message-byte binding;
+- full-evidence nonce binding and stale/expired replay prevention;
+- atomic cross-process once-write and canonical one-use policy consumption;
+- offline `inspect-tools` CLI and conservative classifier;
+- `SOLANA-EVIDENCE-CONTRACT.md`;
+- v0.2 direct pre-installer 104/104 green test run;
+- current-only README.
 
-### Sprint 2 candidate wording
+The checksum is unkeyed. An active editor can change a record and recompute
+it, so it is not a Delta signature, provider-authenticity proof, or
+adversarial tamper protection. The CLI compares a confirmation digest but
+cannot authenticate chat authorship. The skill can be bypassed if another
+PayBox mutation tool remains available.
+
+### Future live-preflight candidate wording
 
 > Protected PayBox can run a read-only preflight for one exact supported
 > on-chain swap. It binds authenticated PayBox wallet/proposal facts, fresh
@@ -93,14 +115,14 @@ Required evidence:
 > transaction bytes. A PASS is point-in-time preflight evidence only. No
 > signature is requested and nothing is broadcast.
 
-Required evidence:
+Required evidence before this wording is allowed:
 
 - adapter owns authenticated PayBox reads;
 - exact unsigned candidate exists before signing;
 - complete transaction decoding and simulation;
 - mutation and stale-evidence tests;
 - no reachable mutation;
-- full Sprint 2 release gate.
+- full deferred live-preflight gate.
 
 ### Sprint 3 candidate wording
 
@@ -111,6 +133,8 @@ Required evidence:
 
 Required evidence:
 
+- managed installer and allowlisted release manifest;
+- deterministic archive/checksum and restricted-`PATH` cold-install checks;
 - conformance contract and test server;
 - proof mismatch, expiry, wallet/client mismatch, replay, concurrency, restart,
   revocation, and uncertain-submission tests;

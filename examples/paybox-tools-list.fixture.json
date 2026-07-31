@@ -1,0 +1,72 @@
+{
+  "jsonrpc": "2.0",
+  "id": "synthetic-fixture",
+  "result": {
+    "tools": [
+      {
+        "name": "get_wallet_balance",
+        "description": "Read the current wallet balance for one chain.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "chain_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "chain_id"
+          ]
+        },
+        "annotations": {
+          "readOnlyHint": true
+        }
+      },
+      {
+        "name": "prepare_swap",
+        "description": "Build an unsigned exact-input swap transaction for review.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "sell_asset": {
+              "type": "string"
+            },
+            "buy_asset": {
+              "type": "string"
+            },
+            "amount": {
+              "type": "string"
+            },
+            "recipient": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "sell_asset",
+            "buy_asset",
+            "amount",
+            "recipient"
+          ]
+        }
+      },
+      {
+        "name": "sign_and_broadcast_transaction",
+        "description": "Sign and broadcast an exact serialized transaction.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "serialized_transaction": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "serialized_transaction"
+          ]
+        },
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true
+        }
+      }
+    ]
+  }
+}

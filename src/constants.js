@@ -1,5 +1,5 @@
 export const PRODUCT_NAME = "Protected PayBox";
-export const VERSION = "0.1.0";
+export const VERSION = "0.2.0";
 
 export const SCHEMAS = Object.freeze({
   INTENT: "protected-paybox.intent.v1",
@@ -8,7 +8,7 @@ export const SCHEMAS = Object.freeze({
   EVIDENCE: "protected-paybox.evidence.solana-swap.v1",
   PROPOSAL: "protected-paybox.proposal.solana-message.v1",
   RECORD: "protected-paybox.record.v1",
-  RECEIPT: "protected-paybox.local-integrity-receipt.v1",
+  RECEIPT: "protected-paybox.local-checksum-receipt.v1",
 });
 
 export const DECISIONS = Object.freeze({
@@ -31,6 +31,10 @@ export const SOLANA_PROFILE = Object.freeze({
   buy_decimals: 9,
   buy_asset: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/slip44:501",
   fixture_builder: "swaps.xyz",
+  fixture_recent_blockhash:
+    "4vJ9JU1bJJE96FWSJKvHsmmF94UyA4Q4xT7m7vYfCjBB",
+  fixture_lookup_table:
+    "7YttLkHDoNj9wyDur5NSVUtWcVwL7W7WvkkufBvZJf1",
   fixture_program_registry: {
     compute_budget: "ComputeBudget111111111111111111111111111111",
     system: "11111111111111111111111111111111",

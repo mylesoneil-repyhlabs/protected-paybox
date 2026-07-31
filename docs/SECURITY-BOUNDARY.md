@@ -1,21 +1,36 @@
 # Protected PayBox security boundary
 
-Status: design boundary; no complete guard runtime exists  
+Status: Sprint 2 offline boundary and Mini-sprint 2 QA complete; live
+execution locked
 Date: 2026-07-30
 
 ## Current boundary
 
-The repository currently contains an unimplemented skill scaffold, product
-documentation, and partial deterministic Sprint 1 modules for canonical
-hashing, decimal arithmetic, closed validation, a fixed Solana profile, and
-policy-plan construction. The launcher is not yet an executable end-to-end
-guard because its CLI and the remaining pipeline are incomplete.
+The repository implements a complete credential-free Sprint 1 fixture flow:
+skill, runner, CLI, closed Solana USDC-to-SOL mandate, deterministic labeled
+evidence, exact fixture-message decoding and byte binding, `PASS`, `BLOCK`, and
+`REVIEW`, an unkeyed SHA-256 local self-consistency checksum, canonical
+one-use policy state, and explicitly locked execution.
 
-The repository has not authenticated to PayBox, enumerated PayBox tools, read
-a wallet, requested a quote, simulated a transaction, produced a decision,
-called Delta, created a receipt, signed a transaction, or broadcast anything.
+The v0.2 direct pre-installer Node suite was rerun on 2026-07-30 and is
+104/104 green. It verifies exact decoded-operation binding, nonce semantics
+over the complete evidence bundle, current re-evaluation before replay, stale
+and expired replay prevention, canonical one-use policy consumption, atomic
+same-process and cross-process once-write behavior, and offline tool-surface
+inspection.
 
-The name Protected PayBox is a project name, not a current security claim.
+The current product has not authenticated to PayBox, captured an authenticated
+PayBox `tools/list`, read a PayBox wallet, requested a live quote, contacted
+Solana or a venue, run a network simulation, called production Delta, requested
+a signature, or broadcast anything. Every fixture states that PayBox and
+external networks were not contacted.
+
+Sprint 2 exposes the offline helper through `inspect-tools`. It reads only a
+caller-supplied saved capture, parses bounded JSON, classifies tool risk,
+redacts value-bearing schema examples, and can write an owner-only
+deterministic snapshot. It has no provider I/O, OAuth client, or MCP
+connection. It is not evidence that any real PayBox tool schema has been
+observed or that a provider behaves as its schema says.
 
 ## Security objective
 
@@ -63,18 +78,21 @@ The model may not:
 
 ### Deterministic Guard Core
 
-Typed deterministic code must own:
+For the current fixture surface, typed deterministic code owns:
 
 - exact schema validation;
 - canonical serialization and digests;
 - decimal arithmetic;
 - policy compilation;
 - evidence normalization and freshness;
-- transaction decoding;
+- fixture-message decoding and exact canonical-byte comparison;
 - `PASS`, `BLOCK`, and `REVIEW`;
 - receipt construction and verification;
-- nonce, replay, concurrency, expiry, and history;
-- future one-use grant consumption.
+- nonce, replay, canonical one-use policy consumption, concurrency, expiry,
+  and history;
+- atomic local nonce once-write and replay state.
+
+Future live evidence and grant consumption remain outside the current build.
 
 Any unexpected exception, schema, field, tool, route, program, contract,
 instruction, provider status, or state transition fails closed.
@@ -85,17 +103,27 @@ PayBox is an external credential and wallet control plane. Its OAuth tokens,
 agent-client keys, wallet material, private keys, key shares, and raw secrets
 must never be passed through chat or stored by the guard.
 
-A live preflight may trust an authenticated PayBox response as evidence that
-PayBox returned it over the configured connection. A local SHA-256 receipt
-does not independently authenticate PayBox's source facts.
+No current product path contacts PayBox. The `tool_contract` inside fixture
+evidence is an explicit unverified placeholder and says that authenticated
+schemas have not been observed.
 
-The public build may expose only explicitly allowlisted read or prepare
-operations. Unknown, approve, sign, broadcast, secret-release, card, or
-arbitrary-operation tools are denied.
+The offline `inspect-tools` command does not make a tool safe. It marks
+read-only candidates conservatively and requires mandate gating for prepare,
+sign, broadcast, combined-write, deceptive, and unknown surfaces. Its source
+record always says `offline_analysis: true` and
+`provider_authenticated: false`. A later live adapter may expose only
+explicitly allowlisted authenticated read or prepare operations. Unknown,
+approve, sign, broadcast, secret-release, card, or arbitrary-operation tools
+remain denied.
+
+A future live preflight may treat an authenticated PayBox response as evidence
+that PayBox returned it over the configured connection. A local SHA-256
+receipt would not independently authenticate PayBox's source facts.
 
 ### Venue, chain, RPC, quote, and simulation providers
 
-These are external data sources, not decision authorities. Apply:
+These providers are not contacted in the current build. Any future live
+adapter must apply:
 
 - HTTPS;
 - fixed origins, hosts, paths, methods, and tool names;
@@ -111,8 +139,11 @@ produces `BLOCK`.
 
 ### Delta
 
-Sprint 1 may use only a labeled local test double. A simulated binding check is
-not a production Delta decision or cryptographic proof.
+The current build does not call a Delta adapter. Its deterministic local
+evaluator and unkeyed SHA-256 checksum are explicitly fixture-only and are not
+a production Delta decision, signature, or cryptographic authenticity proof.
+The checksum detects accidental or unrehashed mutation. An active editor can
+change the record and recompute the checksum.
 
 Production requires:
 
@@ -222,32 +253,52 @@ delegate call to an unknown target, or unexplained token transfer cannot pass.
 - The initial user request is not authorization.
 - Authorization is accepted only after the complete mandate is displayed.
 - Changed semantics always require new authorization.
-- Authorization and credential scope must be revalidated before returning a
-  cached nonce result.
-- An exact retry may return its prior current result.
+- The CLI binds the supplied confirmation digest to the exact policy; it does
+  not authenticate the chat author.
+- The skill's separate-message instruction is behavioral guidance. A model
+  can bypass the skill, and the CLI cannot prove which person or process
+  supplied the matching digest.
+- Confirmation is revalidated before replay lookup.
+- The semantic nonce digest includes the policy, confirmation, and the entire
+  evidence bundle, including quote, reference, simulation, and timestamps.
+- The evaluator recomputes the current result before consulting history.
+- An exact, still-current retry may return its prior stored record.
 - The same nonce with different semantics is `BLOCK`.
-- Concurrent identical attempts serialize.
-- Expired or superseded receipts remain history only.
+- A historical `PASS` is never returned after mandate expiry or evidence
+  staleness.
+- Concurrent identical attempts serialize in-process.
+- Cross-process attempts write owner-only temporary records and use one atomic
+  hard-link claim, so only one record wins.
+- One-use state is keyed by the policy digest in the fixed private runtime. The
+  CLI does not accept a caller-selected history directory.
+- After one nonce produces `PASS`, a different nonce for the same policy
+  returns `BLOCK/PLAN_ALREADY_USED`; it cannot produce a second `PASS`.
 
-## Receipt boundary
+## Local record and checksum boundary
 
-Every supported result must bind:
+Every current fixture result records:
 
 - mode;
 - policy and authorization;
-- wallet and agent-client fingerprints;
-- exact proposal;
+- exact wallet and fixed Solana asset identities;
+- fixture tool-contract placeholder;
+- exact canonical message bytes and decoded operations;
 - normalized evidence and source times;
-- exact unsigned transaction digest;
+- quote, reference, chain, wallet, asset, message, and simulated-result facts;
 - decision and reason;
 - nonce and expiry;
-- receipt digest.
+- public no-execution boundary;
+- an unkeyed SHA-256 checksum over canonical local content and bindings.
 
 Early `BLOCK` and `REVIEW` results use deterministic placeholders for
 unavailable fields and must not imply that missing evidence was checked.
-Sanitize the record before sealing the receipt.
+Sanitize the record before computing the checksum.
 
-A public local receipt proves only local byte integrity. It is not:
+Verification recomputes the unkeyed checksum and its recorded bindings. This
+detects accidental corruption and mutation when the checksum has not also
+been recomputed. Anyone who can edit the record can recompute every SHA-256
+value, so the checksum does not establish adversarial tamper resistance,
+authorship, authenticity, or independent evidence provenance. It is not:
 
 - a production Delta signature or proof;
 - authenticated user identity;
@@ -273,24 +324,27 @@ A public local receipt proves only local byte integrity. It is not:
 
 ## Public execution lock
 
-Through Sprint 3, the public build must have no method, route, tool, runtime
-loader, environment flag, or credential configuration capable of requesting a
-PayBox signature, approval, broadcast, secret, or card output.
+The current `execute`, `sign`, and `broadcast` CLI commands all call the same
+runtime lock and throw `PUBLIC_EXECUTION_LOCKED`. The runtime has no
+PayBox/OAuth adapter or network path capable of requesting a signature,
+approval, broadcast, secret, or card output. This is directly covered by the
+green test suite. This is a runtime-enforced product boundary, not a
+type-level or packaging guarantee.
 
-The production-composition seam must always fail with an explicit engineering
-integration error. A reviewed private composition may eventually provide a
-closure-held signing capability after all conformance gates pass.
+Through Sprint 3, the public build must preserve this boundary. A reviewed
+private composition may eventually provide a closure-held signing capability
+only after all conformance gates pass.
 
 ## Locked or unclaimed capabilities
 
 - live PayBox integration;
-- complete authenticated PayBox tool surface;
-- Solana or EVM route support;
+- any authenticated PayBox tool surface or real `tools/list` capture;
+- live Solana or EVM route support beyond the labeled fixture;
 - read-only wallet or quote evidence;
-- transaction simulation;
+- live-chain transaction simulation;
 - PayBox approval, signature, or broadcast;
 - production Delta integration;
-- cryptographic receipt;
+- keyed or signed Delta receipt;
 - independent source authentication;
 - bypass resistance;
 - Mandate Guarantee;
@@ -300,6 +354,14 @@ closure-held signing capability after all conformance gates pass.
 
 These remain locked until implementation evidence and the claim ledger say
 otherwise.
+
+The following offline Sprint 2 surfaces are implemented and are not included
+in the locked list:
+
+- `inspect-tools` analysis of a saved, untrusted `tools/list` capture;
+- deterministic redacted tool-risk snapshots; and
+- the fixture/live separation and proposed fields in
+  `SOLANA-EVIDENCE-CONTRACT.md`.
 
 ## Release security gate
 

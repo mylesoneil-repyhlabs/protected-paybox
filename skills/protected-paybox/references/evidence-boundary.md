@@ -10,7 +10,9 @@ The local receipt:
 
 - binds policy, authorization, proposal, evidence, message bytes, decision,
   nonce, boundary, and expiry;
-- detects later mutation by recomputing every binding;
+- detects accidental or un-rehashed mutation by recomputing every binding;
+- is an unkeyed local self-consistency checksum, so an active editor can
+  recompute it;
 - is not a Delta signature or proof;
 - does not authenticate where fixture facts originated.
 
@@ -33,8 +35,8 @@ Missing or opaque pre-sign bytes must produce `REVIEW`, never `PASS`.
 ## Source authenticity
 
 OAuth, API keys and TLS can authenticate a channel but do not independently
-sign provider facts. Hashes provide tamper evidence after capture, not proof
-of original source truth. A finalized on-chain transaction is
+sign provider facts. Unkeyed hashes provide checksums after capture, not
+tamper-proofing or proof of original source truth. A finalized on-chain transaction is
 consensus-verifiable; a single RPC response remains provider-mediated.
 
 PayBox signing would prove that a wallet signed bytes. It would not prove the

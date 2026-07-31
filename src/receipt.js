@@ -53,7 +53,7 @@ export function createRecord(evaluation, { now = new Date() } = {}) {
     receipt_id: randomUUID(),
     issued_at: new Date(now).toISOString(),
     verifier: {
-      name: "Protected PayBox local integrity verifier",
+      name: "Protected PayBox local checksum verifier",
       algorithm: "SHA-256 over canonical JSON",
       production_delta_proof: false,
     },
@@ -125,7 +125,7 @@ export function verifyRecord(record) {
     outcome: record.decision.outcome,
     receipt_digest: suppliedReceiptDigest,
     statement:
-      "Local fixture integrity only. This is not a production Delta signature or PayBox execution receipt.",
+      "Local checksum is self-consistent. It is unkeyed and is not a production Delta signature or PayBox execution receipt.",
   };
 }
 

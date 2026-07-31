@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { canonicalize, digestBytes } from "../src/canonical.js";
+import { canonicalize, digest, digestBytes } from "../src/canonical.js";
 import { buildDemoEvidence, buildDemoIntent } from "../src/fixtures.js";
 import { evaluateProposal, computeReferenceMinimum } from "../src/evaluator.js";
 import { createPlan } from "../src/policy.js";
@@ -38,7 +38,7 @@ const scenarios = [
   ["block-network-fee", "BLOCK", "NETWORK_FEE_EXCEEDED"],
   ["block-price-impact", "BLOCK", "PRICE_IMPACT_EXCEEDED"],
   ["block-recipient", "BLOCK", "RECIPIENT_MISMATCH"],
-  ["review-stale", "REVIEW", "QUOTE_STALE"],
+  ["review-stale", "REVIEW", "COLLECTION_STALE"],
   ["review-unknown-program", "REVIEW", "PROGRAM_NOT_ALLOWLISTED"],
   ["review-hidden-inner-call", "REVIEW", "INNER_PROGRAM_NOT_ALLOWLISTED"],
   ["review-simulation-failed", "REVIEW", "SIMULATION_FAILED"],
@@ -231,6 +231,62 @@ test("chain evidence must bind the exact message blockhash", () => {
   });
   assert.equal(result.decision.outcome, "REVIEW");
   assert.equal(result.decision.code, "BLOCKHASH_BINDING_MISMATCH");
+});
+
+test("top-level collection timestamp is validated and fresh", () => {
+  const malformed = evaluate("pass", (evidence) => {
+    evidence.collected_at = "not-a-timestamp";
+  });
+  assert.equal(malformed.decision.outcome, "REVIEW");
+  assert.equal(malformed.decision.code, "TIMESTAMP_INVALID");
+
+  const stale = evaluate("pass", (evidence) => {
+    evidence.collected_at = "2000-01-01T00:00:00.000Z";
+  });
+  assert.equal(stale.decision.outcome, "REVIEW");
+  assert.equal(stale.decision.code, "COLLECTION_STALE");
+});
+
+test("quote expected receive cannot be below its minimum", () => {
+  const result = evaluate("pass", (evidence) => {
+    evidence.quote.expected_receive_atomic = "1";
+    evidence.quote.raw_response_digest = digest({
+      builder: evidence.quote.builder,
+      expected_receive_atomic: evidence.quote.expected_receive_atomic,
+      minimum_receive_atomic: evidence.quote.minimum_receive_atomic,
+      price_impact_bps: evidence.quote.price_impact_bps,
+      expires_at: evidence.quote.expires_at,
+    });
+  });
+  assert.equal(result.decision.outcome, "REVIEW");
+  assert.equal(result.decision.code, "QUOTE_AMOUNTS_INCOHERENT");
+});
+
+test("blockhash and lookup-table accounts must be 32-byte base58 values", () => {
+  const blockhash = evaluate("pass", (evidence) => {
+    evidence.message.decoded.recent_blockhash = "x";
+    evidence.chain.recent_blockhash = "x";
+    rebindDecodedMessage(evidence);
+  });
+  assert.equal(blockhash.decision.outcome, "REVIEW");
+  assert.equal(blockhash.decision.code, "PUBLIC_KEY_INVALID");
+
+  const lookupTable = evaluate("pass", (evidence) => {
+    evidence.message.decoded.address_lookup_tables[0].table_account = "x";
+    rebindDecodedMessage(evidence);
+  });
+  assert.equal(lookupTable.decision.outcome, "REVIEW");
+  assert.equal(lookupTable.decision.code, "PUBLIC_KEY_INVALID");
+});
+
+test("lookup-table resolution slot cannot be later than chain evidence", () => {
+  const result = evaluate("pass", (evidence) => {
+    evidence.message.decoded.address_lookup_tables[0].resolved_at_slot =
+      "999999999999999999999";
+    rebindDecodedMessage(evidence);
+  });
+  assert.equal(result.decision.outcome, "REVIEW");
+  assert.equal(result.decision.code, "LOOKUP_TABLE_SLOT_INVALID");
 });
 
 for (const [mutate, expectedCode] of [

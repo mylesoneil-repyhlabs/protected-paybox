@@ -1,40 +1,76 @@
 # Protected PayBox project plan
 
-Status: implementation plan  
-Date: 2026-07-30  
-Owner: delta product and engineering  
+Status: Sprint 1, Mini-sprint 1, Sprint 2, and Mini-sprint 2 complete
+Date: 2026-07-30
+Owner: delta product and engineering
 Target repository: personal GitHub, separate from Coinbase Guard
 
 ## Product truth today
 
-Protected PayBox is currently a project specification, an unimplemented skill
-scaffold, and a partial Sprint 1 deterministic foundation. The repository now
-contains package metadata, a launcher, canonical hashing, decimal helpers,
-closed intent validation, a fixed Solana profile, and policy-plan
-construction. It does not yet have a complete executable CLI or skill
-workflow, proposal/evidence/simulation/decision pipeline, receipt, nonce
-history, tests, PayBox OAuth session, authenticated PayBox tool inventory,
-live data adapter, Delta integration, or signing or broadcast capability.
+Sprint 1 and Mini-sprint 1 are complete. Protected PayBox provides a valid,
+credential-free skill package and deterministic CLI for one strict Solana
+Mainnet USDC-to-SOL transaction-shaped fixture. It compiles a closed mandate,
+evaluates complete labeled fixture evidence, returns `PASS`, `BLOCK`, or
+`REVIEW`, records an unkeyed SHA-256 local self-consistency checksum, and
+handles one-use replay and concurrency.
 
-Nothing in the current repository can yet complete a protected flow, simulate
-or submit a PayBox operation, or produce a verified decision. Sprint 1 must
-preserve that truth until each corresponding capability is implemented and
-tested.
+The supported custom fixture is exactly 25 USDC sold for at least 0.18 SOL,
+with 100 bps maximum slippage and price impact, a 0.00005 SOL network-fee cap,
+a 0.00002 SOL priority-fee cap, same-wallet settlement, and a 120-second
+authorization. The fixture remains synthetic and does not estimate a live
+market price.
+
+The CLI creates this custom mandate with `plan --intent`, saves the plan, and
+displays its policy digest. `demo --plan ... --confirm-policy ...` evaluates
+the labeled fixture only when supplied that exact saved plan and digest. The
+direct custom-intent demo shortcut is intentionally unsupported. The
+confirmation binds bytes, not identity: the CLI cannot authenticate who
+authored a chat message.
+Canonical one-use state stays in the fixed private runtime; the CLI does not
+accept a caller-selected history directory. Once that policy produces a
+`PASS`, a later attempt under a different nonce returns
+`BLOCK/PLAN_ALREADY_USED`.
+
+Sprint 2 integrates an offline `inspect-tools` command and the
+`SOLANA-EVIDENCE-CONTRACT.md` partner contract. The inspector accepts a saved
+MCP `tools/list` capture, bounds and validates it, classifies tool risk,
+redacts value-bearing schema examples, and produces a deterministic snapshot.
+It has no OAuth or network path and cannot establish that a capture came from
+PayBox.
+
+The v0.2 direct pre-installer suite was rerun on 2026-07-30: 104/104 tests
+passed. It covers exact decoded-operation and message-byte binding,
+complete-evidence nonce binding, stale and expired replay prevention, one-use
+policy consumption, atomic cross-process once-write behavior, receipt
+self-consistency, redaction, closed schemas, offline tool-surface inspection,
+and the public execution lock.
+
+PayBox has not been contacted. No authenticated `tools/list`, OAuth session,
+wallet, quote, chain state, venue response, or network simulation has been
+captured. The checked-in `tools/list` capture is synthetic. The inspector is
+an offline static-analysis aid, not PayBox discovery or authenticated
+evidence.
+
+Production Delta is not integrated. The public `execute`, `sign`, and
+`broadcast` paths fail at runtime with `PUBLIC_EXECUTION_LOCKED`; no PayBox or
+network adapter exists, so no signature, transaction, or money movement is
+possible.
 
 ## Product decision
 
-The first useful partner asset is not a generic DeFi guard. It is one complete,
-auditable path for one exact-input on-chain swap:
+The first useful partner asset is not a generic DeFi guard. Sprint 1 proves one
+complete, auditable fixture path for one exact-input on-chain swap:
 
 > Protected PayBox turns a user's natural-language swap request into a closed
-> mandate, pauses for explicit authorization, evaluates one exact unsigned
-> transaction against fresh wallet, route, market, fee, and simulation
-> evidence, and returns `PASS`, `BLOCK`, or `REVIEW` with a bound receipt.
+> mandate, pauses for explicit authorization, evaluates one exact
+> transaction-shaped fixture against complete labeled wallet, route, market,
+> fee, message, and simulation evidence, and returns `PASS`, `BLOCK`, or
+> `REVIEW` with a bound local record and checksum.
 
-The public partner-evaluation build will stop before PayBox signing or
-broadcast. A `PASS` will mean that the candidate satisfied the checked policy
-and evidence at that moment. It will not be a signature, execution grant,
-fill, price guarantee, production Delta decision, or Mandate Guarantee.
+The public partner-evaluation build stops before PayBox signing or broadcast.
+A Sprint 1 `PASS` means only that the exact local fixture satisfied the closed
+local policy. It is not a signature, execution grant, fill, price guarantee,
+production Delta decision, or Mandate Guarantee.
 
 ## Why Solana is the primary candidate
 
@@ -54,8 +90,8 @@ The primary candidate is:
 - no transfer, bridge, lending, perpetual, prediction-market, x402, card, or
   secret-release operation.
 
-The current partial policy profile models held USDC to SOL, matching a natural
-agentic swap use case. Solana does not require an EVM-style allowance
+The current closed fixture policy profile models held USDC to SOL, matching a
+natural agentic swap use case. Solana does not require an EVM-style allowance
 transaction for the wallet-owned source token account, but the final swap must
 not create a delegate or separate approval. The proposed transaction may
 contain understood associated-token-account, compute-budget, token, system,
@@ -72,17 +108,20 @@ allowlisted. An unknown instruction or unresolved address lookup table is
 | Transaction inspection | Versioned transactions, address lookup tables, program instructions, compute budget, priority fee | Chain ID, nonce, `to`, `value`, calldata, EIP-1559 fee fields |
 | Implementation complexity | Higher decoder and account-resolution complexity | Usually simpler deterministic calldata and contract-code checks |
 | Route evidence | Strong if PayBox exposes Jupiter or another named route and exact transaction | Strong if PayBox exposes a named aggregator/router and exact calldata |
-| Approval avoidance | Native SOL input avoids SPL approval | Native ETH input avoids ERC-20 approval |
+| Approval avoidance | Wallet-owned USDC source account; separate approval or delegate instructions forbidden | Native ETH input avoids ERC-20 approval |
 | Partner-pitch value | Highest if it matches PayBox's real launch path | Better fallback if it is materially more inspectable |
 
 Solana is the product-led choice. EVM is the engineering fallback, not a
 parallel Sprint 1 scope.
 
-### Chain-selection gate
+### Future live-chain gate
 
-The engineering lead must capture the authenticated PayBox MCP contract before
-freezing the chain profile. Solana is selected only if PayBox exposes, before
-signing:
+Sprint 1 fixes Solana as the local fixture profile because it best matches the
+PayBox launch context. That does not establish that authenticated PayBox
+exposes the same venue or transaction shape. Before enabling any live
+read-only preflight, the engineering lead must capture the authenticated
+PayBox MCP contract. Solana remains the live candidate only if PayBox exposes,
+before signing:
 
 1. the exact wallet and chain;
 2. the named venue or aggregator and route;
@@ -96,8 +135,8 @@ signing:
 If Solana fails this gate and an EVM route satisfies it, the first live
 preflight becomes native ETH to USDC on one selected EVM chain, with Base as
 the preferred candidate. If neither chain satisfies it, Protected PayBox
-remains a labeled credential-free simulation. The team must not reconstruct a
-different route and call it the PayBox proposal.
+remains the shipped labeled credential-free simulation. The team must not
+reconstruct a different route and call it the PayBox proposal.
 
 ## Target persona
 
@@ -211,7 +250,9 @@ Acceptance:
 - authorization binds the latest policy digest and expires;
 - any changed policy term requires a new display and authorization;
 - the current public implementation must say that chat authorship is not
-  cryptographically authenticated.
+  cryptographically authenticated;
+- a skill remains model guidance and cannot prevent an agent from bypassing it
+  to call another connected PayBox tool.
 
 ### US-3: Understand the decision
 
@@ -228,21 +269,29 @@ Acceptance:
 - hashes and normalized technical details remain available on request but are
   not required in the ordinary journey.
 
-### US-4: Detect mutation and replay
+### US-4: Detect accidental or unrehashed mutation and replay
 
-As Alex or a PayBox engineer, I can prove that changing the candidate after
-verification invalidates the result.
+As Alex or a PayBox engineer, I can detect a candidate or record change when
+the recorded checksum has not also been recomputed, and I can reject replay
+that changes proposal semantics.
 
 Acceptance:
 
-- the receipt binds policy, authorization, wallet, route, evidence, exact
-  unsigned bytes, decision, nonce, and expiry;
-- any instruction, account, recipient, mint, amount, route, program, fee,
-  blockhash, or lookup-table mutation invalidates the receipt;
+- the current receipt binds policy, authorization, wallet, route, evidence,
+  exact canonical fixture-message bytes, decision, nonce, and expiry; a future
+  live record must bind the actual unsigned transaction bytes;
+- any unrehashed instruction, account, recipient, mint, amount, route,
+  program, fee, blockhash, or lookup-table mutation fails local checksum
+  verification;
+- because the checksum is unkeyed SHA-256, an active editor can change the
+  record and recompute it; this is not a Delta signature, authenticity proof,
+  or adversarial tamper protection;
 - exact retry may return the prior current result without a second provider
   call;
 - nonce reuse for different semantics blocks;
-- concurrent one-use attempts serialize.
+- concurrent one-use attempts serialize;
+- after one nonce produces `PASS`, the same one-use policy cannot produce a
+  second `PASS` under another nonce.
 
 ### US-5: Evaluate a future PayBox signing hook
 
@@ -266,22 +315,28 @@ User
 Protected PayBox skill
   |  model: extract, clarify, explain only
   v
-Deterministic Guard Core
+Current deterministic Guard Core
   |- intent compiler and closed policy validator
   |- explicit authorization binder
-  |- proposal decoder and canonical serializer
-  |- evidence normalizer and freshness checks
+  |- fixture proposal decoder and canonical serializer
+  |- fixture evidence normalizer and freshness checks
   |- PASS / BLOCK / REVIEW engine
-  |- nonce, replay, receipt, and local history
-  |
-  |- PayBox read/prepare adapter
-  |- route quote adapter
-  |- Solana or EVM evidence adapter
-  |- independent transaction simulator
-  `- Delta adapter: labeled local simulation initially
+  |- nonce, one-use policy state, receipt, and local history
+  `- labeled local Solana fixture only
 
-Public production-composition seam
-  `- sign/broadcast capability unavailable
+Current public boundary
+  `- execute / sign / broadcast throw at runtime
+
+Sprint 2, integrated offline surfaces
+  |- inspect-tools accepts only a saved tools/list capture
+  |- bounded static risk classification and redacted snapshot
+  |- Solana F1/L1 evidence and trust contract
+  `- no OAuth, PayBox, venue, chain, or Delta adapter
+
+Sprint 3, planned
+  |- managed installer and reproducible release validation
+  |- PayBox signing-boundary conformance artifacts
+  `- authenticated/live adapters remain gated on discovered contracts
 ```
 
 The model may preserve language, identify missing terms, and explain typed
@@ -289,11 +344,13 @@ output. Deterministic code owns schema validation, canonicalization, decimal
 arithmetic, evidence, freshness, decisions, receipts, nonce state, and all
 future execution gates.
 
-Host-mediated PayBox output copied through chat is not trusted evidence. A
-live preflight requires the deterministic adapter or an authenticated
-Delta-controlled proxy to own the PayBox request and receive the provider
-response. If the host's OAuth token cannot be delegated safely, that mode
-remains unavailable.
+Host-mediated PayBox output copied through chat is not trusted evidence. The
+offline `inspect-tools` command can parse, bound, classify, redact, sort, and
+digest a saved MCP `tools/list` response, but it performs no provider I/O,
+authenticates no provider, and does not feed the evaluator. A live preflight
+requires a deterministic adapter or authenticated Delta-controlled proxy to
+own the PayBox request and receive the provider response. If the host's OAuth
+token cannot be delegated safely, that mode remains unavailable.
 
 ## Evidence contract
 
@@ -328,165 +385,215 @@ Suggested starting profile:
 Provider receipt time is not silently represented as provider observation
 time. Evidence authenticity limits must remain visible.
 
-## Sprint 1: contract discovery and truthful simulation
+## Sprint 1: truthful simulation
 
-Release target: `v0.1.0`
+State: complete in the shared tree
+Version: `0.1.0`
+Committed Sprint 1 baseline: `ff37db6`
 
-### PM
+### PM result
 
-- Freeze this PRD, action taxonomy, persona, claims, and non-goals.
-- Define the ordinary demo: meaningful conditional swap, first candidate
-  `BLOCK`, revised candidate `PASS`.
-- Keep the real transaction cap separate from the simulated narrative.
-- Record every unsupported PayBox action instead of implying broad coverage.
+- Froze one strict Solana Mainnet exact-input USDC-to-SOL fixture surface.
+- Kept live PayBox, broad DeFi, production Delta, signing, and broadcast out of
+  scope.
+- Defined a meaningful `BLOCK`, corrected `PASS`, and evidence-unavailable
+  `REVIEW`.
+- Kept README current-only and moved historical detail into these docs.
 
-### Full-stack engineering lead
+### Engineering result
 
-- Define versioned module boundaries and schemas.
-- Template only reusable, committed Coinbase Guard patterns; do not copy its
-  Coinbase-specific action or its dirty working tree.
-- Make the public sign/broadcast composition seam unimplementable through
-  environment variables, flags, credentials, or runtime code loading.
+- Implemented the skill, runner, CLI, versioned closed schemas, canonical
+  hashing, integer decimal/atomic arithmetic, policy compiler, fixture builder,
+  evidence normalizer, evaluator, receipt verifier, reporting, and private
+  file handling.
+- Added `doctor`, `plan`, `demo`, `simulate`, and `verify`.
+- Made `execute`, `sign`, and `broadcast` fail with
+  `PUBLIC_EXECUTION_LOCKED`.
+- Bound exact canonical message bytes to decoded top-level and inner
+  operations, fee payer, signer set, lookup-table resolution, program
+  allowlist, builder, assets, amount, minimum receive, recipient, simulated
+  deltas, and fee fields.
 
-### Senior full-stack engineer
+### Data result
 
-- Implement the deterministic compiler, validator, proposer, fixture
-  pipeline, decision engine, receipt verifier, nonce state, redacted history,
-  CLI, and skill runner.
-- Keep the credential-free path as the default.
+- Implemented labeled, deterministic Swaps.xyz-shaped fixtures without
+  claiming that authenticated PayBox uses Swaps.xyz.
+- Added the strict custom 25 USDC fixture:
+  `examples/solana-25-usdc-intent.json`.
+- Preserved exact Solana chain and CAIP-19 asset identity; symbols remain
+  display labels only.
+- Marked every fixture as self-reported local evidence with no PayBox or
+  network contact.
 
-### Back-end data engineer
+### DevOps and UX result
 
-- Capture and hash authenticated PayBox `tools/list` without invoking a
-  mutation.
-- Classify every tool as read, prepare/simulate, approve, sign, broadcast, or
-  unknown.
-- Build labeled Solana and EVM fixtures, source metadata, and the evidence
-  schema.
+- Added Node 22 runtime discovery, safe absolute-path JSON input, non-symlink
+  and size checks, owner-only artifacts, and skill validation.
+- Implemented compact mandate and decision output with technical hashes only
+  on request.
+- Made `SIMULATION ONLY · NO PAYBOX CONTACT · NO SIGNATURE · NO TRANSACTION`
+  part of every supported result.
+- Kept credentials unnecessary and out of the workflow.
 
-### DevOps engineer
+### QA result
 
-- Add pinned Node runtime support, CI, dependency lock, secret/content scan,
-  deterministic release archive, checksum, managed installer, and restricted
-  `PATH` cold-install tests.
-- Exclude credentials, OAuth data, runtime state, raw provider bodies, and
-  generated private artifacts from releases.
+The v0.2 direct pre-installer Node test run is 104/104 green. This aggregate
+includes the Sprint 2 inspector and CLI tests as well as Sprint 1 coverage:
 
-### Designer and front-end engineer
+- closed intent and evidence schemas;
+- atomic-unit arithmetic;
+- `PASS`, policy `BLOCK`, and evidence `REVIEW`;
+- exact message bytes and decoded-operation semantics;
+- unknown programs, hidden inner calls, unresolved or changed evidence, and
+  unexpected asset movement;
+- receipt checksum mismatch detection and redaction-before-checksum;
+- confirmation-before-replay;
+- full-evidence nonce binding;
+- stale and expired replay prevention;
+- 50-way in-process concurrency;
+- atomic cross-process once-write convergence;
+- invalid nonce redaction;
+- the public execution lock;
+- bounded offline discovery parsing and risk classification.
 
-- Produce a chat-native mandate and decision hierarchy.
-- Keep raw hashes and paths behind a details request.
-- Make `SIMULATION`, `NO PAYBOX CONTACT`, and `NO SIGNATURE` visually
-  unmistakable.
-
-### QA specialist
-
-- Test unsupported intent, malformed schema, decimal boundaries, stale and
-  missing evidence, wrong route, mutation, replay, nonce concurrency, early
-  failure receipts, redaction, restricted `PATH`, source deletion, and release
-  contents.
-- Verify that redaction happens before receipt sealing and authorization
-  before retry lookup.
-
-### Target persona
-
-- Complete install, intent, clarification, authorization, decision, detail,
-  and history journeys without coaching.
-- Explain the decision and execution boundary back to the team.
+No direct external target-user interview is claimed. The skill and CLI embody
+the approved Alex persona requirements; Mini-sprint 2 should obtain fresh
+qualitative feedback.
 
 ### Sprint 1 exit gate
 
-- Authenticated tool inventory exists, but no PayBox mutation was called.
-- Chain decision is recorded using the selection gate above.
-- Credential-free `BLOCK -> PASS` fixture works through deterministic code.
-- Every supported outcome has a verifiable redacted local receipt.
-- Public code has no reachable sign or broadcast capability.
-- Full test, skill, link, secret scan, deterministic bundle, managed install,
-  restricted `PATH`, source-deletion, and claim-ledger checks pass.
-- README is created or updated before release and describes only the current
-  verified functionality.
-- GitHub tag, release archive, checksum, and independent re-download
-  verification are complete.
+- [x] Strict Solana fixture and custom 25 USDC mandate work through
+      deterministic code.
+- [x] Complete fixture evidence returns `PASS`, `BLOCK`, or `REVIEW`.
+- [x] Every supported outcome has a redacted local record whose unkeyed
+      SHA-256 checksum can be recomputed for self-consistency.
+- [x] Exact bytes and every decoded operation are bound.
+- [x] Full evidence is included in nonce semantics.
+- [x] Stale or expired facts cannot inherit a historical `PASS`.
+- [x] Same-process and cross-process once-write behavior is atomic.
+- [x] Public execution remains locked.
+- [x] PayBox and external networks are never contacted.
+- [x] v0.2 direct pre-installer suite passes 104/104.
+- [x] README describes only current verified functionality.
+- [ ] No authenticated PayBox `tools/list` is claimed; this is a future live
+      integration prerequisite.
+- [ ] No GitHub tag, release archive, checksum, or independent re-download is
+      claimed by this shared-tree verification.
 
-### Sprint 1 mini-sprint
+### Mini-sprint 1 result
 
-Fix reproduced QA and persona findings, prioritizing:
+State: complete in the shared tree
 
-1. any false `PASS`, invalid negative receipt, replay race, or secret leak;
-2. `BLOCK` versus `REVIEW` errors;
-3. stale or misleading mode/boundary language;
-4. source-dependent installer instructions;
-5. unnecessary digest, path, or configuration ceremony.
+Mini-sprint 1 hardened the completed simulation by adding and verifying:
 
-Do not begin Sprint 2 until the patched release passes the full gate again.
+1. the strict custom 25 USDC intent path;
+2. exact decoded swap and priority-fee operation binding;
+3. nonce semantics over policy, confirmation, and the complete evidence
+   bundle, including quote, reference, simulation, and timestamps;
+4. current re-evaluation before replay so expired mandates and stale evidence
+   never reuse a historical `PASS`;
+5. atomic cross-process once-write using owner-only temporary files and a
+   single successful hard-link claim;
+6. the initial offline, bounded, redacted PayBox tool-discovery module and
+   adversarial tests, subsequently exposed through the Sprint 2
+   `inspect-tools` command.
 
-## Sprint 2: one live read-only swap preflight
+## Sprint 2: offline tool-surface and evidence contract
 
-Release target: `v0.2.0`
+State: complete
+Version: `0.2.0`
 
-Implement only the selected Solana route, or the documented EVM fallback.
+Sprint 2 deliberately does not claim a live read-only preflight. It turns the
+unknown PayBox surface and Solana evidence requirements into inspectable
+partner artifacts without requiring credentials.
 
-### Team deliverables
+### Team result
 
-- PM: freeze the live mode, freshness profile, source responsibility, and
-  public wording.
-- Engineering lead: approve the PayBox OAuth/read boundary and adapter
-  allowlist.
-- Senior engineer: implement PayBox read/prepare, chain, quote, decoding, and
-  simulation adapters.
-- Data engineer: normalize only allowlisted facts, resolve route identities,
-  and bind every evidence timestamp or slot/block.
-- DevOps: add network-contract fixtures, provider-failure tests, and secret
-  redaction checks.
-- Design/front-end: distinguish `DRY RUN` from `READ-ONLY PREFLIGHT` and show
-  checked-source freshness.
-- QA: attack schema drift, malicious route data, stale blockhash, reorg,
-  lookup-table mutation, program/router mutation, unexpected deltas, fee
-  manipulation, rate limits, timeouts, and partial responses.
-- Persona: complete the preflight and correctly explain that no signature or
-  future execution guarantee exists.
+- PM: froze the offline-only scope and prohibited authenticated/live wording.
+- Engineering lead: kept OAuth, provider I/O, signing, and broadcast outside
+  the runtime.
+- Senior engineer: integrated `inspect-tools` into the CLI with absolute-path
+  input and optional owner-only snapshot output.
+- Data engineer: implemented bounded parsing, conservative classification,
+  deterministic redaction and digests, plus
+  `docs/SOLANA-EVIDENCE-CONTRACT.md`.
+- DevOps: added malformed, ambiguous, duplicate, deceptive, destructive,
+  oversized, and redaction-focused tests.
+- Design/front-end: made `OFFLINE CAPTURE ANALYSIS` and the no-OAuth boundary
+  prominent in ordinary output.
+- QA: expanded the v0.2 direct pre-installer suite to 104/104 green and
+  completed independent adversarial review.
+- Persona: can distinguish a static schema-risk snapshot from proof of real
+  provider behavior.
 
-### Sprint 2 exit gate
+### Sprint 2 implemented gate
 
-- The adapter, not the model, obtains authenticated PayBox facts.
-- OAuth tokens and agent-client keys never enter chat, logs, receipts, history,
-  artifacts, or Git.
-- PayBox exposes the exact unsigned candidate before signing.
-- The complete transaction is decoded and simulated against recent state.
-- Every economic and instruction-level constraint is checked.
-- One-byte or one-field mutation invalidates the old result.
-- Missing, stale, malformed, ambiguous, rate-limited, or changed evidence
-  returns `REVIEW`.
-- Healthy-source performance target is p95 at or below 12 seconds, with a
-  progress update after two seconds.
-- No sign, approval, broadcast, transaction hash, or money movement occurs.
-- Full Sprint 1 release gates rerun, README reflects only current v0.2
-  behavior, and the personal-GitHub release is independently verified.
+- [x] `inspect-tools` accepts a saved direct array, `{tools}`, or JSON-RPC
+      `tools/list` response.
+- [x] Input size, shape, depth, node count, tool count, strings, keys, and
+      duplicate names are bounded.
+- [x] Tools are conservatively classified as `read`, `prepare`, `sign`,
+      `broadcast`, `combined_write`, or `unknown`.
+- [x] Destructive, deceptive, preparatory, mutating, and unknown tools cannot
+      become safe read-only candidates.
+- [x] Value-bearing examples and secret-shaped schema values are redacted
+      before optional owner-only snapshot output.
+- [x] The snapshot declares `offline_analysis: true` and
+      `provider_authenticated: false`.
+- [x] The Solana evidence contract separates implemented fixture profile `F1`
+      from proposed live profile `L1`, source authenticity, and the PayBox
+      questions that must be answered.
+- [x] No OAuth, PayBox, venue, chain, Delta, signing, or broadcast adapter was
+      added.
+- [x] v0.2 direct pre-installer suite passes 104/104.
 
-### Sprint 2 mini-sprint
+### Mini-sprint 2
 
-Fix actual PayBox schema mismatches, flaky source behavior, false provenance,
-transaction-decoder gaps, output overload, and any path that contacts a
-mutation. Re-run the full security and release gates.
+State: complete
 
-## Sprint 3: PayBox signing-boundary conformance kit
+The adversarial review confirmed that misleading names, descriptions, enum
+actions, and annotations cannot turn a mutating tool into a read-only
+candidate. It also covered schema-value leakage, malformed JSON-RPC
+envelopes, duplicate tools, oversized inputs, owner-only output, alternate
+history redirection, one-use replay, and the execution lock. The target-persona
+review found no blocker for a local simulation-only partner asset and
+confirmed that the checksum, authorship, provider-authenticity, and bypass
+limits remain visible.
+
+### Deferred live preflight gate
+
+An authenticated read-only preflight remains future work and cannot ship
+merely because `inspect-tools` accepts a saved capture. It still requires:
+
+- a deterministic adapter that owns authenticated PayBox reads without
+  exposing OAuth material to chat;
+- the exact unsigned candidate before signing;
+- complete transaction decoding and independent recent-chain simulation;
+- authenticated wallet, route, source, and freshness bindings;
+- `REVIEW` on missing, stale, malformed, ambiguous, rate-limited, or changed
+  evidence; and
+- no mutation, signature, broadcast, or money movement.
+
+## Sprint 3: installable partner release and signing-boundary conformance kit
 
 Release target: `v0.3.0`
 
-Sprint 3 does not enable public signing. It turns the prototype into the asset
-used to pitch a native PayBox integration.
+Sprint 3 does not enable public signing. It packages the prototype
+reproducibly and turns the evidence contract into the asset used to pitch a
+native PayBox integration.
 
 ### Team deliverables
 
 - PM: partner narrative, responsibility model, latency budget, rollout gates,
   and exact native-hook ask.
-- Engineering lead: production-shaped adapter and private-composition
-  boundary.
-- Senior engineer: conformance server, durable-grant contract, recovery state
-  machine, and adversarial fixtures.
+- Engineering lead: installer/release architecture, production-shaped adapter
+  contract, and private-composition boundary.
+- Senior engineer: managed installer, conformance harness, durable-grant
+  contract, recovery state machine, and adversarial fixtures.
 - Data engineer: proof/evidence binding manifest and reconciliation schema.
-- DevOps: isolated conformance environment, fault injection, restart and
-  concurrency tests, and reproducible partner package.
+- DevOps: deterministic release archive and checksum, allowlisted manifest,
+  restricted-`PATH` cold-install verification, source-deletion installed
+  checks, isolated conformance environment, and fault injection.
 - Design/front-end: three-minute `BLOCK -> PASS -> mutation/replay rejected`
   demo.
 - QA: independent attack review across bypass, proof mismatch, expiry,
@@ -516,6 +623,9 @@ used to pitch a native PayBox integration.
 - Ambiguous broadcast enters reconciliation-only state.
 - The conformance kit demonstrates that a raw alternate mutation path would
   defeat enforcement and specifies how PayBox must remove it.
+- A managed install works from the release package under a restricted
+  `PATH`, remains functional after the unpacked source is removed, and matches
+  the release checksum and allowlisted manifest.
 - Public GitHub code still cannot sign or broadcast.
 - Production Delta proof, PayBox-native enforcement, liability assignment, and
   mainnet protection remain unclaimed.
@@ -534,11 +644,13 @@ Stop after the patched `v0.3.0` partner-evaluation release. At that point the
 asset should provide:
 
 - one complete credential-free simulation;
-- one real read-only preflight for the selected chain and route, if PayBox
-  exposes the required contract;
+- an offline tool-surface inspector and explicit Solana evidence contract;
+- one real read-only preflight only if a later authenticated PayBox contract
+  satisfies the deferred live gate;
 - a meaningful `BLOCK`, a valid candidate, a mutation failure, and a replay
   failure;
-- current documentation and a reproducible personal-GitHub release;
+- a managed install, current documentation, and a reproducible
+  personal-GitHub release;
 - a precise native PayBox signing-hook contract and conformance suite;
 - no signing, broadcast, or money movement.
 

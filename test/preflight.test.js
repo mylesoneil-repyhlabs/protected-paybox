@@ -128,7 +128,7 @@ test("stale evidence never replays a historical PASS", async (t) => {
   });
   assert.equal(stale.replayed, false);
   assert.equal(stale.record.decision.outcome, "REVIEW");
-  assert.equal(stale.record.decision.code, "QUOTE_STALE");
+  assert.equal(stale.record.decision.code, "COLLECTION_STALE");
 });
 
 test("valid record transplant cannot satisfy another history binding", async (t) => {
@@ -162,11 +162,15 @@ test("valid record transplant cannot satisfy another history binding", async (t)
   await runPreflight(inputB);
   const fileA = path.join(
     historyA,
-    (await readdir(historyA)).find((name) => name.endsWith(".json")),
+    (await readdir(historyA)).find(
+      (name) => name.endsWith(".json") && !name.startsWith("plan-use-"),
+    ),
   );
   const fileB = path.join(
     historyB,
-    (await readdir(historyB)).find((name) => name.endsWith(".json")),
+    (await readdir(historyB)).find(
+      (name) => name.endsWith(".json") && !name.startsWith("plan-use-"),
+    ),
   );
   const storedA = JSON.parse(await readFile(fileA, "utf8"));
   const storedB = JSON.parse(await readFile(fileB, "utf8"));
@@ -251,13 +255,39 @@ test("separate processes atomically converge on one nonce binding", async (t) =>
       .every((result) => result.outcome === "BLOCK"),
   );
   const historyFiles = (await readdir(historyDirectory)).filter((name) =>
-    name.endsWith(".json"),
+    name.endsWith(".json") && !name.startsWith("plan-use-"),
   );
   assert.equal(historyFiles.length, 1);
   const stored = JSON.parse(
     await readFile(path.join(historyDirectory, historyFiles[0]), "utf8"),
   );
   assert.equal(stored.record.record_digest, durableRecords[0].record_digest);
+});
+
+test("one-use plan cannot PASS twice under different nonces", async (t) => {
+  const historyDirectory = await temporaryHistory(t);
+  const plan = createPlan(buildDemoIntent(), {
+    now: NOW,
+    id: "one-use-plan",
+  });
+  const common = {
+    plan,
+    confirmationDigest: plan.policy_digest,
+    evidence: buildDemoEvidence(plan, { now: NOW }),
+    now: NOW,
+    historyDirectory,
+  };
+  const first = await runPreflight({
+    ...common,
+    nonce: "one-use-first-nonce",
+  });
+  const second = await runPreflight({
+    ...common,
+    nonce: "one-use-second-nonce",
+  });
+  assert.equal(first.record.decision.outcome, "PASS");
+  assert.equal(second.record.decision.outcome, "BLOCK");
+  assert.equal(second.record.decision.code, "PLAN_ALREADY_USED");
 });
 
 test("invalid nonce blocks without echoing it", async () => {

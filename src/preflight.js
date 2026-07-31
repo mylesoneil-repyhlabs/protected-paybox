@@ -122,6 +122,19 @@ async function runSerialized(input) {
       });
     }
 
+    if (record.decision.outcome === "PASS") {
+      const planUse = await claimPlanUse({
+        historyDirectory,
+        plan,
+        confirmationDigest,
+        nonce,
+        semanticDigest,
+        record,
+        now,
+      });
+      if (planUse) return planUse;
+    }
+
     const created = await writePrivateJsonOnce(storedPath, {
       semantic_digest: semanticDigest,
       record,
@@ -140,6 +153,64 @@ async function runSerialized(input) {
     }
   }
   return { record, replayed: false };
+}
+
+async function claimPlanUse({
+  historyDirectory,
+  plan,
+  confirmationDigest,
+  nonce,
+  semanticDigest,
+  record,
+  now,
+}) {
+  const usePath = planUsePath(historyDirectory, plan.policy_digest);
+  const claim = {
+    policy_digest: plan.policy_digest,
+    nonce_digest: digest(nonce),
+    request_binding_digest: semanticDigest,
+    record_digest: record.record_digest,
+  };
+  if (await writePrivateJsonOnce(usePath, claim)) return null;
+
+  await assertPrivateRegularFile(usePath);
+  const stored = await readJsonFile(usePath, "stored plan-use claim");
+  const keys =
+    stored && typeof stored === "object" && !Array.isArray(stored)
+      ? Object.keys(stored).sort()
+      : [];
+  if (
+    keys.join(",") !==
+      "nonce_digest,policy_digest,record_digest,request_binding_digest" ||
+    stored.policy_digest !== plan.policy_digest ||
+    ![stored.nonce_digest, stored.request_binding_digest, stored.record_digest]
+      .every((value) => typeof value === "string" && /^[a-f0-9]{64}$/.test(value))
+  ) {
+    throw new GuardError(
+      "PLAN_USE_RECORD_INVALID",
+      "Stored one-use plan state failed its structure check.",
+    );
+  }
+  if (
+    stored.nonce_digest === claim.nonce_digest &&
+    stored.request_binding_digest === claim.request_binding_digest
+  ) {
+    return null;
+  }
+  const evaluation = earlyDecision({
+    plan,
+    confirmationDigest,
+    nonce,
+    outcome: "BLOCK",
+    code: "PLAN_ALREADY_USED",
+    reason:
+      "This one-use mandate already produced a PASS for another proposal attempt.",
+    recovery: "Create and separately authorize a new mandate.",
+  });
+  return {
+    record: createRecord(evaluation, { now }),
+    replayed: false,
+  };
 }
 
 async function readStoredNonceRecord(storedPath) {
@@ -202,6 +273,10 @@ function resolveStoredRecord({
 
 function storagePath(directory, nonce) {
   return path.join(directory, `${digest(nonce)}.json`);
+}
+
+function planUsePath(directory, policyDigest) {
+  return path.join(directory, `plan-use-${digest(policyDigest)}.json`);
 }
 
 function earlyDecision({

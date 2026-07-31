@@ -17,6 +17,7 @@ import {
   writePrivateText,
 } from "./io.js";
 import { createPlan, formatMandate, validatePlan } from "./policy.js";
+import { buildPayboxToolSnapshot } from "./paybox-discovery.js";
 import { assertExecutionLocked, runPreflight } from "./preflight.js";
 import { formatDecision, renderHtml } from "./report.js";
 import { verifyRecord } from "./receipt.js";
@@ -52,6 +53,9 @@ async function main() {
     case "verify":
       await verifyCommand(options);
       return;
+    case "inspect-tools":
+      await inspectToolsCommand(options);
+      return;
     case "execute":
     case "sign":
     case "broadcast":
@@ -85,7 +89,7 @@ async function doctor(options) {
     `${PRODUCT_NAME} v${VERSION}`,
     `Node ${result.node}: ${result.node_supported ? "ready" : "unsupported"}`,
     "Mode: credential-free simulated fixture",
-    "Execution: compile-time locked",
+    "Execution: locked; no execution adapter",
     "PayBox/network contact: none",
   ].join("\n"));
 }
@@ -94,7 +98,7 @@ async function planCommand(options) {
   noUnknownOptions(options, ["intent", "out", "json", "details"]);
   requireOption(options, "intent");
   const intent = await readJsonFile(
-    path.resolve(options.intent),
+    options.intent,
     "intent file",
   );
   const plan = createPlan(intent);
@@ -117,7 +121,6 @@ async function demoCommand(options) {
     "json",
     "details",
     "out",
-    "history",
     "plan",
     "confirm-policy",
   ]);
@@ -144,7 +147,7 @@ async function demoCommand(options) {
   let confirmationDigest;
   if (options.plan) {
     requireOption(options, "confirm-policy");
-    plan = await readJsonFile(path.resolve(options.plan), "plan file");
+    plan = await readJsonFile(options.plan, "plan file");
     validateLoadedPlan(plan);
     confirmationDigest = options["confirm-policy"];
   } else {
@@ -167,8 +170,8 @@ async function demoCommand(options) {
     evidence,
     nonce: `demo-${scenario}-${digest(now.toISOString()).slice(0, 24)}`,
     now,
-    historyDirectory: options.history
-      ? path.resolve(options.history)
+    historyDirectory: options.plan
+      ? path.join(DEFAULT_RUNTIME, "history")
       : null,
   });
   await persistRecord(result.record, options.out);
@@ -185,15 +188,14 @@ async function simulateCommand(options) {
     "json",
     "details",
     "out",
-    "history",
   ]);
   for (const required of ["plan", "evidence", "confirm-policy", "nonce"]) {
     requireOption(options, required);
   }
-  const plan = await readJsonFile(path.resolve(options.plan), "plan file");
+  const plan = await readJsonFile(options.plan, "plan file");
   validateLoadedPlan(plan);
   const evidence = await readJsonFile(
-    path.resolve(options.evidence),
+    options.evidence,
     "evidence file",
   );
   const result = await runPreflight({
@@ -201,9 +203,7 @@ async function simulateCommand(options) {
     confirmationDigest: options["confirm-policy"],
     evidence,
     nonce: options.nonce,
-    historyDirectory: options.history
-      ? path.resolve(options.history)
-      : path.join(DEFAULT_RUNTIME, "history"),
+    historyDirectory: path.join(DEFAULT_RUNTIME, "history"),
   });
   await persistRecord(result.record, options.out);
   if (options.json) print({ ...result, verification: verifyRecord(result.record) });
@@ -213,10 +213,47 @@ async function simulateCommand(options) {
 async function verifyCommand(options) {
   noUnknownOptions(options, ["record", "json"]);
   requireOption(options, "record");
-  const record = await readJsonFile(path.resolve(options.record), "record file");
+  const record = await readJsonFile(options.record, "record file");
   const result = verifyRecord(record);
   print(options.json ? result : `${result.verified ? "VERIFIED" : "INVALID"} — ${result.statement ?? result.reason}`);
   if (!result.verified) process.exitCode = 2;
+}
+
+async function inspectToolsCommand(options) {
+  noUnknownOptions(options, ["capture", "out", "json"]);
+  requireOption(options, "capture");
+  const capture = await readJsonFile(
+    options.capture,
+    "captured tools/list file",
+  );
+  const snapshot = buildPayboxToolSnapshot(capture);
+  let outputPath = null;
+  if (options.out) {
+    outputPath = path.resolve(options.out);
+    await writePrivateJson(outputPath, snapshot);
+  }
+  if (options.json) {
+    print({ snapshot_path: outputPath, snapshot });
+    return;
+  }
+  const safeCandidates = snapshot.tools
+    .filter((tool) => tool.safe_read_only_candidate)
+    .map((tool) => tool.name);
+  const gated = snapshot.tools
+    .filter((tool) => tool.requires_mandate_gate)
+    .map((tool) => `${tool.name} (${tool.classification})`);
+  print([
+    "PAYBOX TOOL SURFACE · OFFLINE CAPTURE ANALYSIS",
+    "",
+    `Tools: ${snapshot.tool_count}`,
+    `Read-only candidates: ${safeCandidates.join(", ") || "none"}`,
+    `Mandate-gated or unknown: ${gated.join(", ") || "none"}`,
+    `Snapshot digest: ${snapshot.snapshot_digest}`,
+    outputPath ? `Private snapshot: ${outputPath}` : null,
+    "",
+    "Boundary: no OAuth, PayBox request, signature, broadcast, or transaction.",
+    "Classification is conservative static analysis, not proof of provider behavior.",
+  ].filter(Boolean).join("\n"));
 }
 
 async function persistRecord(record, output) {
@@ -294,6 +331,7 @@ Usage:
   ./run demo --plan /absolute/plan.json --confirm-policy <digest> --scenario pass
   ./run simulate --plan /absolute/plan.json --evidence /absolute/evidence.json --confirm-policy <digest> --nonce <one-use-nonce>
   ./run verify --record /absolute/record.json
+  ./run inspect-tools --capture /absolute/tools-list.json [--out /private/snapshot.json]
 
 Public execution is locked. The commands execute, sign, and broadcast always fail closed.`;
 }

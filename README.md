@@ -33,7 +33,7 @@ BLOCK — The proposed minimum receive is below the user limit recomputed from
 the local reference fixture.
 
 Boundary: SIMULATION ONLY · NO PAYBOX CONTACT · NO SIGNATURE · NO TRANSACTION
-Receipt: local fixture integrity only.
+Receipt: local checksum self-consistent; not signed.
 ```
 
 The companion `PASS` proves only that the exact local fixture satisfied the
@@ -54,8 +54,8 @@ closed local policy. It is not a production Delta proof or PayBox execution.
 | Message checks | Fee payer, signer set, programs, inner calls, lookup tables, exact bytes |
 | Decisions | `PASS`, `BLOCK`, `REVIEW` |
 | Evidence | Deterministic local fixtures |
-| PayBox OAuth/tools | Not used |
-| Signature/broadcast | Compile-time locked |
+| PayBox OAuth/tools | Offline captured-schema classifier; no OAuth |
+| Signature/broadcast | CLI locked; no execution adapter |
 
 The Swaps.xyz profile is based on
 [MoonPay's public swap skill](https://github.com/moonpay/skills/blob/main/skills/moonpay-swap-tokens/SKILL.md),
@@ -92,6 +92,8 @@ Requirements: macOS or Linux and Node.js 22+.
 ./run demo --scenario block-minimum-receive
 ./run demo --scenario pass
 ./run demo --scenario review-stale
+./run inspect-tools \
+  --capture "$(pwd)/examples/paybox-tools-list.fixture.json"
 ```
 
 If Node is not on the login `PATH`, point the runner at an executable:
@@ -107,7 +109,7 @@ Compile a private custom plan:
 
 ```bash
 ./run plan \
-  --intent "$(pwd)/examples/solana-usdc-to-sol-intent.json" \
+  --intent "$(pwd)/examples/solana-25-usdc-intent.json" \
   --details
 ```
 
@@ -126,8 +128,32 @@ slippage, a 0.00005 SOL network-fee cap, a separate 0.00002 SOL priority-fee
 cap, and same-wallet settlement. It remains synthetic and does not estimate a
 live market price.
 
+The skill pauses for a separate user message before supplying the digest to
+the CLI. The local CLI proves only that the supplied digest matches the
+unchanged mandate; it cannot prove who authored the chat message or stop an
+agent that ignores the skill. Bypass-resistant enforcement still requires a
+mandatory Delta check inside PayBox's signing boundary.
+
 The CLI requires absolute paths for input files, rejects symlinks and files
 over 1 MiB, and writes optional artifacts as owner-only files.
+
+## Inspect a PayBox tool surface safely
+
+The offline inspector accepts a saved MCP `tools/list` response, bounds and
+validates the JSON, redacts value-bearing schema examples, and classifies each
+tool as `read`, `prepare`, `sign`, `broadcast`, `combined_write`, or
+`unknown`.
+
+```bash
+./run inspect-tools \
+  --capture /absolute/path/to/tools-list.json \
+  --out /absolute/private/paybox-tool-snapshot.json
+```
+
+Unknown, preparatory, mutating, destructive, or misleadingly annotated tools
+are never marked safe. The checked-in capture is synthetic. Even a real
+captured file is recorded as unauthenticated offline input until PayBox
+provides an authenticated contract or signed schema.
 
 ## What is checked
 
@@ -155,9 +181,9 @@ evidence, decide the verdict, or unlock execution.
 | Natural-language workflow | Skill instructions implemented |
 | Closed intent and policy | Implemented locally |
 | Exact proposal evaluation | Implemented for labeled fixtures |
-| Local receipt | Tamper-evident SHA-256 integrity record |
+| Local receipt | Unkeyed SHA-256 self-consistency checksum; not tamper-proof |
 | Source authenticity | Not established by fixture hashes |
-| Authenticated PayBox `tools/list` | Not captured |
+| Authenticated PayBox `tools/list` | Offline analyzer implemented; live contract not captured |
 | Live quote/chain/simulation | Not implemented |
 | Private Delta verifier/signature | Not integrated |
 | PayBox signing/broadcast | Unreachable |

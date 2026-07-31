@@ -35,7 +35,7 @@ export function formatDecision(record, { details = false } = {}) {
   }
   lines.push(
     `Boundary: ${record.boundary.statement}`,
-    `Receipt: ${verifyRecord(record).verified ? "local fixture integrity only" : "verification failed"}.`,
+    `Receipt: ${verifyRecord(record).verified ? "local checksum self-consistent; not signed" : "checksum verification failed"}.`,
   );
   if (details) {
     lines.push(
@@ -81,7 +81,7 @@ export function renderHtml(record) {
     <div class="fact"><b>Mandate</b>${escapeHtml(record.plan.policy.economics.exact_sell_amount_display)} USDC → at least ${escapeHtml(record.plan.policy.economics.minimum_receive_display)} SOL</div>
     <div class="fact"><b>Network</b>Solana Mainnet · self-recipient</div>
     <div class="fact"><b>Builder</b>${escapeHtml(record.evidence?.quote?.builder ?? "Not reached")}</div>
-    <div class="fact"><b>Receipt</b>${verification.verified ? "Local fixture integrity only" : "Verification failed"}</div>
+    <div class="fact"><b>Receipt</b>${verification.verified ? "Local checksum self-consistent; not signed" : "Checksum verification failed"}</div>
   </div>
   <p><b>Why:</b> ${escapeHtml(record.decision.reason)}</p>
   ${record.decision.recovery ? `<p><b>Recovery:</b> ${escapeHtml(record.decision.recovery)}</p>` : ""}

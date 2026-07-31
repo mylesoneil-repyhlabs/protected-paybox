@@ -47,6 +47,7 @@ export function normalizeEvidence(input, plan, { now = new Date() } = {}) {
       "This release accepts labeled simulated fixtures only.",
     );
   }
+  requireIsoTimestamp(input.collected_at, "evidence.collected_at");
   validateProvenance(input.provenance);
   validateToolContract(input.tool_contract);
   validateWallet(input.wallet);
@@ -358,10 +359,16 @@ function validateDecodedMessage(value) {
     );
   }
   normalizePublicKey(value.fee_payer, "evidence.message.decoded.fee_payer");
-  requireBoundedString(
+  normalizePublicKey(
     value.recent_blockhash,
     "evidence.message.decoded.recent_blockhash",
   );
+  if (value.recent_blockhash !== SOLANA_PROFILE.fixture_recent_blockhash) {
+    throw new GuardError(
+      "FIXTURE_BLOCKHASH_INVALID",
+      "The simulated fixture blockhash is outside the deterministic profile.",
+    );
+  }
   requireUnsignedIntegerString(
     value.last_valid_block_height,
     "evidence.message.decoded.last_valid_block_height",
@@ -386,10 +393,16 @@ function validateDecodedMessage(value) {
       ["table_account", "resolved", "resolved_at_slot", "table_data_sha256"],
       `evidence.message.decoded.address_lookup_tables[${index}]`,
     );
-    requireBoundedString(
+    normalizePublicKey(
       table.table_account,
       `evidence.message.decoded.address_lookup_tables[${index}].table_account`,
     );
+    if (table.table_account !== SOLANA_PROFILE.fixture_lookup_table) {
+      throw new GuardError(
+        "FIXTURE_LOOKUP_TABLE_INVALID",
+        "The simulated fixture lookup table is outside the deterministic profile.",
+      );
+    }
     if (typeof table.resolved !== "boolean") {
       throw new GuardError(
         "LOOKUP_TABLE_STATUS_INVALID",
@@ -653,6 +666,24 @@ function validateFixtureBindings(input, plan) {
     );
   }
   if (
+    BigInt(input.quote.minimum_receive_atomic) >
+    BigInt(input.quote.expected_receive_atomic)
+  ) {
+    throw new GuardError(
+      "QUOTE_AMOUNTS_INCOHERENT",
+      "Quote minimum receive cannot exceed its expected receive amount.",
+    );
+  }
+  if (
+    input.quote.expected_receive_atomic !==
+    input.simulation.buy_credit_atomic
+  ) {
+    throw new GuardError(
+      "QUOTE_SIMULATION_MISMATCH",
+      "The fixture quote expected receive differs from the simulated credit.",
+    );
+  }
+  if (
     input.chain.recent_blockhash !==
     input.message.decoded.recent_blockhash
   ) {
@@ -660,6 +691,14 @@ function validateFixtureBindings(input, plan) {
       "BLOCKHASH_BINDING_MISMATCH",
       "The chain evidence does not bind the message recent blockhash.",
     );
+  }
+  for (const table of input.message.decoded.address_lookup_tables) {
+    if (BigInt(table.resolved_at_slot) > BigInt(input.chain.current_slot)) {
+      throw new GuardError(
+        "LOOKUP_TABLE_SLOT_INVALID",
+        "A lookup table cannot be resolved after the observed chain slot.",
+      );
+    }
   }
 }
 
@@ -669,6 +708,11 @@ function freshnessIssues(input, now) {
     throw new GuardError("CLOCK_INVALID", "Evaluation clock is invalid.");
   }
   const checks = [
+    [
+      "COLLECTION_STALE",
+      input.collected_at,
+      DEFAULT_FRESHNESS.simulation_max_age_ms,
+    ],
     ["QUOTE_STALE", input.quote.observed_at, DEFAULT_FRESHNESS.quote_max_age_ms],
     [
       "WALLET_STALE",

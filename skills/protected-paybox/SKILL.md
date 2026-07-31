@@ -72,6 +72,10 @@ authorization. Continue only after a separate user message equivalent to:
 Authorize this mandate
 ```
 
+The CLI binds the supplied digest but cannot authenticate who authored a chat
+message. This pause is a required skill workflow, not a bypass-resistant
+security boundary. Never claim otherwise.
+
 After that separate message, evaluate a labeled custom fixture using the
 saved plan path and the exact displayed policy digest:
 
@@ -101,8 +105,9 @@ Always state:
 SIMULATION ONLY · NO PAYBOX CONTACT · NO SIGNATURE · NO TRANSACTION
 ```
 
-Never imply a production Delta proof. The receipt is locally verifiable
-SHA-256 integrity evidence only.
+Never imply a production Delta proof. The receipt is an unkeyed local
+self-consistency checksum. It detects changes only when the checksum is not
+also recomputed; it is not tamper-proof against an active editor.
 
 ## Refuse unsupported operations
 
@@ -120,9 +125,25 @@ Do not translate or approximate:
 Explain which boundary is unsupported and ask for an exact-input,
 self-recipient USDC-to-SOL dry run instead.
 
+## Inspect a supplied tool capture
+
+If the user supplies a saved PayBox MCP `tools/list` JSON file, inspect it
+offline:
+
+```bash
+skills/protected-paybox/scripts/run inspect-tools \
+  --capture /absolute/private/tools-list.json \
+  --out /absolute/private/paybox-tool-snapshot.json
+```
+
+Treat only the harness classification as authoritative. Describe `read`
+entries as candidates, not verified-safe provider behavior. Every `prepare`,
+`sign`, `broadcast`, `combined_write`, or `unknown` entry requires a mandate
+gate. Do not request OAuth tokens or attempt to capture the tool list through
+a network call.
+
 ## Preserve the execution lock
 
 Treat `execute`, `sign`, and `broadcast` failure as a required product
 property. Do not patch, bypass, replace, or dynamically load an executor.
-Authenticated PayBox tool discovery is a future read-only integration step,
-not permission to move funds.
+Offline PayBox tool-schema inspection is not permission to move funds.
