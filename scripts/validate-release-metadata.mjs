@@ -94,8 +94,8 @@ for (const lockedBoundary of [
 
 const ci = await text(".github/workflows/ci.yml");
 for (const pinnedAction of [
-  "actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955",
-  "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+  "actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
+  "actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38",
 ]) {
   assert(
     ci.includes(pinnedAction),
