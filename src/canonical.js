@@ -69,6 +69,13 @@ export function assertExactKeys(value, allowed, field) {
       `${field} contains unsupported field${unknown.length === 1 ? "" : "s"}: ${unknown.join(", ")}.`,
     );
   }
+  const missing = allowed.filter((key) => !Object.hasOwn(value, key));
+  if (missing.length > 0) {
+    throw new GuardError(
+      "MISSING_FIELD",
+      `${field} is missing required field${missing.length === 1 ? "" : "s"}: ${missing.join(", ")}.`,
+    );
+  }
 }
 
 export function clone(value) {

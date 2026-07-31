@@ -1,5 +1,6 @@
 import { canonicalize, digest, digestBytes } from "./canonical.js";
 import { SCHEMAS, SOLANA_PROFILE } from "./constants.js";
+import { GuardError } from "./errors.js";
 
 export const DEMO_WALLET =
   "8xQeWvG816bUx9EPjHmaT23yvVMQV4MfMjcnW8nx2Wn";
@@ -37,12 +38,38 @@ export function buildDemoEvidence(
   }
   const quoteExpiresAt = new Date(observedAt.getTime() + 10_000);
   const policy = plan.policy;
+  if (
+    scenario === "block-price-impact" &&
+    policy.economics.max_price_impact_bps === 10_000
+  ) {
+    throw new GuardError(
+      "SCENARIO_NOT_APPLICABLE",
+      "A price-impact violation cannot exceed the valid 10,000 bps ceiling.",
+    );
+  }
+  const minimumReceive = BigInt(policy.economics.minimum_receive_atomic);
+  const passReceive =
+    minimumReceive + maxBigInt(1n, minimumReceive / 25n);
+  const blockedReceive =
+    minimumReceive > 1n
+      ? minimumReceive - maxBigInt(1n, minimumReceive / 25n)
+      : 0n;
   const receiveAtomic =
-    scenario === "block-minimum-receive" ? "24000000" : "26000000";
+    scenario === "block-minimum-receive"
+      ? blockedReceive.toString()
+      : passReceive.toString();
+  const maxNetworkFee = BigInt(policy.economics.max_network_fee_atomic);
   const networkFee =
-    scenario === "block-network-fee" ? "250000" : "120000";
+    scenario === "block-network-fee"
+      ? (maxNetworkFee + maxBigInt(1n, maxNetworkFee / 4n)).toString()
+      : maxBigInt(1n, (maxNetworkFee * 3n) / 5n).toString();
   const priceImpact =
-    scenario === "block-price-impact" ? 90 : 35;
+    scenario === "block-price-impact"
+      ? Math.min(10_000, policy.economics.max_price_impact_bps + 30)
+      : Math.min(35, policy.economics.max_price_impact_bps);
+  const priorityFee = (
+    BigInt(policy.economics.max_priority_fee_atomic) * 4n / 5n
+  ).toString();
   const recipient =
     scenario === "block-recipient"
       ? "7YttLkHDoNj9wyDur5NSVUtWcVwL7W7WvkkufBvZJf1"
@@ -83,8 +110,7 @@ export function buildDemoEvidence(
         decoder_id: "solana-compute-budget.v1",
         decoded_operation: {
           type: "set_compute_unit_price",
-          maximum_priority_fee_atomic:
-            policy.economics.max_priority_fee_atomic,
+          priority_fee_atomic: priorityFee,
         },
       },
       {
@@ -145,8 +171,12 @@ export function buildDemoEvidence(
     wallet: {
       account: policy.authority.wallet_account,
       chain_id: policy.network.chain_id,
-      sell_balance_atomic: "25000000",
-      native_fee_balance_atomic: "5000000",
+      sell_balance_atomic: (
+        BigInt(policy.economics.exact_sell_amount_atomic) * 5n
+      ).toString(),
+      native_fee_balance_atomic: (
+        BigInt(networkFee) + maxNetworkFee * 25n
+      ).toString(),
       observed_at: observedAt.toISOString(),
     },
     assets: {
@@ -168,6 +198,7 @@ export function buildDemoEvidence(
       chain_id: policy.network.chain_id,
       current_slot: "290000006",
       current_block_height: "29000100",
+      recent_blockhash: decodedMessage.recent_blockhash,
       blockhash_valid: true,
       observed_at: observedAt.toISOString(),
     },
@@ -182,8 +213,8 @@ export function buildDemoEvidence(
       expires_at: quoteExpiresAt.toISOString(),
     },
     reference: {
-      source: "independent-reference-fixture",
-      expected_receive_atomic: "26100000",
+      source: "local-reference-fixture",
+      expected_receive_atomic: passReceive.toString(),
       observed_at: observedAt.toISOString(),
     },
     message: {
@@ -204,10 +235,14 @@ export function buildDemoEvidence(
       buy_credit_atomic: receiveAtomic,
       recipient_account: recipient,
       network_fee_atomic: networkFee,
-      priority_fee_atomic: "80000",
+      priority_fee_atomic: priorityFee,
       unexpected_asset_deltas: [],
       undecoded_instructions: [],
       observed_at: observedAt.toISOString(),
     },
   };
+}
+
+function maxBigInt(left, right) {
+  return left > right ? left : right;
 }

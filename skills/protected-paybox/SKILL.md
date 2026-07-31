@@ -72,9 +72,18 @@ authorization. Continue only after a separate user message equivalent to:
 Authorize this mandate
 ```
 
-For this public release, use only a labeled fixture or an explicitly supplied
-schema-valid fixture. Never describe fixture data as PayBox, Swaps.xyz, or
-Solana data.
+After that separate message, evaluate a labeled custom fixture using the
+saved plan path and the exact displayed policy digest:
+
+```bash
+skills/protected-paybox/scripts/run demo \
+  --plan /absolute/private/plan.json \
+  --confirm-policy <displayed-policy-digest> \
+  --scenario pass
+```
+
+For this public release, use only a labeled fixture. Never describe fixture
+data as PayBox, Swaps.xyz, or Solana data.
 
 ## Present decisions
 

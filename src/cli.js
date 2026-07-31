@@ -16,7 +16,7 @@ import {
   writePrivateJson,
   writePrivateText,
 } from "./io.js";
-import { createPlan, formatMandate } from "./policy.js";
+import { createPlan, formatMandate, validatePlan } from "./policy.js";
 import { assertExecutionLocked, runPreflight } from "./preflight.js";
 import { formatDecision, renderHtml } from "./report.js";
 import { verifyRecord } from "./receipt.js";
@@ -118,6 +118,8 @@ async function demoCommand(options) {
     "details",
     "out",
     "history",
+    "plan",
+    "confirm-policy",
   ]);
   const scenario = options.scenario ?? "pass";
   const allowed = new Set([
@@ -138,14 +140,30 @@ async function demoCommand(options) {
     );
   }
   const now = new Date();
-  const plan = createPlan(buildDemoIntent(), {
-    now,
-    id: `demo-${digest(`${scenario}-${now.toISOString()}`).slice(0, 20)}`,
-  });
+  let plan;
+  let confirmationDigest;
+  if (options.plan) {
+    requireOption(options, "confirm-policy");
+    plan = await readJsonFile(path.resolve(options.plan), "plan file");
+    validateLoadedPlan(plan);
+    confirmationDigest = options["confirm-policy"];
+  } else {
+    if (options["confirm-policy"]) {
+      throw new GuardError(
+        "OPTION_INVALID",
+        "--confirm-policy is accepted only with a saved --plan.",
+      );
+    }
+    plan = createPlan(buildDemoIntent(), {
+      now,
+      id: `demo-${digest(`${scenario}-${now.toISOString()}`).slice(0, 20)}`,
+    });
+    confirmationDigest = plan.policy_digest;
+  }
   const evidence = buildDemoEvidence(plan, { scenario, now });
   const result = await runPreflight({
     plan,
-    confirmationDigest: plan.policy_digest,
+    confirmationDigest,
     evidence,
     nonce: `demo-${scenario}-${digest(now.toISOString()).slice(0, 24)}`,
     now,
@@ -213,15 +231,7 @@ async function persistRecord(record, output) {
 }
 
 function validateLoadedPlan(plan) {
-  if (plan?.schema_version !== SCHEMAS.PLAN) {
-    throw new GuardError("PLAN_SCHEMA_INVALID", "Plan schema is unsupported.");
-  }
-  if (digest(plan.policy) !== plan.policy_digest) {
-    throw new GuardError(
-      "PLAN_POLICY_DIGEST_MISMATCH",
-      "The plan policy no longer matches its digest.",
-    );
-  }
+  validatePlan(plan);
 }
 
 function parseOptions(tokens) {
@@ -281,6 +291,7 @@ Usage:
   ./run doctor [--json]
   ./run plan --intent /absolute/intent.json [--out /private/directory] [--details]
   ./run demo --scenario pass|block-minimum-receive|review-stale [--details] [--out /private/directory]
+  ./run demo --plan /absolute/plan.json --confirm-policy <digest> --scenario pass
   ./run simulate --plan /absolute/plan.json --evidence /absolute/evidence.json --confirm-policy <digest> --nonce <one-use-nonce>
   ./run verify --record /absolute/record.json
 

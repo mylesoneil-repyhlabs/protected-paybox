@@ -1,13 +1,16 @@
 import {
   constants,
   lstat,
+  link,
   mkdir,
   open,
   readFile,
   rename,
   stat,
+  unlink,
   writeFile,
 } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { GuardError } from "./errors.js";
 
@@ -38,6 +41,19 @@ export async function readJsonFile(filePath, field = "file") {
     constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0),
   );
   try {
+    const openedMetadata = await handle.stat();
+    if (!openedMetadata.isFile()) {
+      throw new GuardError(
+        "FILE_TYPE_INVALID",
+        `${field} must remain a regular file after opening.`,
+      );
+    }
+    if (openedMetadata.size > MAX_JSON_BYTES) {
+      throw new GuardError(
+        "FILE_TOO_LARGE",
+        `${field} exceeds the 1 MiB limit.`,
+      );
+    }
     const text = await handle.readFile("utf8");
     return JSON.parse(text);
   } catch (error) {
@@ -54,16 +70,57 @@ export async function writePrivateJson(filePath, value) {
   await writePrivateText(filePath, `${JSON.stringify(value, null, 2)}\n`);
 }
 
+export async function writePrivateJsonOnce(filePath, value) {
+  const directory = path.dirname(filePath);
+  await ensurePrivateDirectory(directory);
+  const temporary = path.join(
+    directory,
+    `.${path.basename(filePath)}.${process.pid}.${randomUUID()}.tmp`,
+  );
+  const handle = await open(
+    temporary,
+    constants.O_WRONLY |
+      constants.O_CREAT |
+      constants.O_EXCL |
+      (constants.O_NOFOLLOW ?? 0),
+    0o600,
+  );
+  try {
+    await handle.writeFile(`${JSON.stringify(value, null, 2)}\n`, "utf8");
+    await handle.sync();
+  } finally {
+    await handle.close();
+  }
+  try {
+    await link(temporary, filePath);
+    await assertPrivateRegularFile(filePath);
+    return true;
+  } catch (error) {
+    if (error?.code === "EEXIST") return false;
+    throw error;
+  } finally {
+    await unlink(temporary).catch((error) => {
+      if (error?.code !== "ENOENT") throw error;
+    });
+  }
+}
+
 export async function writePrivateText(filePath, text) {
   const directory = path.dirname(filePath);
   await ensurePrivateDirectory(directory);
   const temporary = path.join(
     directory,
-    `.${path.basename(filePath)}.${process.pid}.${Date.now()}.tmp`,
+    `.${path.basename(filePath)}.${process.pid}.${randomUUID()}.tmp`,
   );
-  await writeFile(temporary, text, { mode: 0o600, flag: "wx" });
-  await rename(temporary, filePath);
-  await assertPrivateRegularFile(filePath);
+  try {
+    await writeFile(temporary, text, { mode: 0o600, flag: "wx" });
+    await rename(temporary, filePath);
+    await assertPrivateRegularFile(filePath);
+  } finally {
+    await unlink(temporary).catch((error) => {
+      if (error?.code !== "ENOENT") throw error;
+    });
+  }
 }
 
 export async function ensurePrivateDirectory(directory) {

@@ -29,6 +29,19 @@ test("sanitizer redacts secret-looking provider text", () => {
   assert.equal(safe.message, "[REDACTED:SECRET-LIKE]");
 });
 
+test("sanitizer preserves non-secret policy authorization semantics", () => {
+  const safe = sanitize({
+    authorization: {
+      use_count: 1,
+      expires_at: "2026-07-30T12:02:00.000Z",
+    },
+  });
+  assert.deepEqual(safe.authorization, {
+    use_count: 1,
+    expires_at: "2026-07-30T12:02:00.000Z",
+  });
+});
+
 test("canonical JSON rejects non-JSON values", () => {
   assert.throws(() => canonicalize({ value: undefined }), /Canonical JSON/);
 });

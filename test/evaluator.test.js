@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { canonicalize, digestBytes } from "../src/canonical.js";
 import { buildDemoEvidence, buildDemoIntent } from "../src/fixtures.js";
 import { evaluateProposal, computeReferenceMinimum } from "../src/evaluator.js";
 import { createPlan } from "../src/policy.js";
@@ -17,6 +18,14 @@ function evaluate(scenario = "pass", mutate = null) {
     nonce: "evaluator-nonce-0001",
     now: NOW,
   });
+}
+
+function rebindDecodedMessage(evidence) {
+  const bytes = Buffer.from(canonicalize(evidence.message.decoded), "utf8");
+  const messageDigest = digestBytes(bytes);
+  evidence.message.message_base64 = bytes.toString("base64");
+  evidence.message.message_sha256 = messageDigest;
+  evidence.simulation.message_sha256 = messageDigest;
 }
 
 test("recomputes slippage minimum with integer floor", () => {
@@ -115,3 +124,135 @@ test("unexpected asset movement is a deterministic BLOCK", () => {
   assert.equal(result.decision.outcome, "BLOCK");
   assert.equal(result.decision.code, "UNEXPECTED_ASSET_DELTA");
 });
+
+test("empty decoded instruction set can never PASS", () => {
+  const result = evaluate("pass", (evidence) => {
+    evidence.message.decoded.instructions = [];
+    rebindDecodedMessage(evidence);
+  });
+  assert.equal(result.decision.outcome, "REVIEW");
+  assert.equal(result.decision.code, "INSTRUCTION_SET_INVALID");
+});
+
+test("arbitrary allowlisted operation can never PASS", () => {
+  const result = evaluate("pass", (evidence) => {
+    evidence.message.decoded.instructions[1].decoded_operation.type =
+      "close_account_and_drain";
+    rebindDecodedMessage(evidence);
+  });
+  assert.equal(result.decision.outcome, "REVIEW");
+  assert.equal(result.decision.code, "SWAP_OPERATION_UNSUPPORTED");
+});
+
+for (const [field, changedValue, expectedCode] of [
+  ["builder", "evil-builder", "MESSAGE_BUILDER_MISMATCH"],
+  ["sell_asset", "solana:changed/token:changed", "MESSAGE_SELL_ASSET_MISMATCH"],
+  ["buy_asset", "solana:changed/slip44:1", "MESSAGE_BUY_ASSET_MISMATCH"],
+  ["minimum_receive_atomic", "25000001", "MESSAGE_MINIMUM_RECEIVE_MISMATCH"],
+]) {
+  test(`decoded swap ${field} is exactly bound`, () => {
+    const result = evaluate("pass", (evidence) => {
+      evidence.message.decoded.instructions[1].decoded_operation[field] =
+        changedValue;
+      rebindDecodedMessage(evidence);
+    });
+    assert.equal(result.decision.outcome, "BLOCK");
+    assert.equal(result.decision.code, expectedCode);
+  });
+}
+
+test("decoded priority fee is bound to the simulated fee", () => {
+  const result = evaluate("pass", (evidence) => {
+    evidence.message.decoded.instructions[0].decoded_operation
+      .priority_fee_atomic = "70000";
+    rebindDecodedMessage(evidence);
+  });
+  assert.equal(result.decision.outcome, "BLOCK");
+  assert.equal(result.decision.code, "PRIORITY_FEE_MESSAGE_MISMATCH");
+});
+
+test("zero-slippage mandate still produces a valid PASS fixture", () => {
+  const plan = createPlan(buildDemoIntent({ max_slippage_bps: 0 }), {
+    now: NOW,
+    id: "plan-zero-slippage",
+  });
+  const result = evaluateProposal({
+    plan,
+    confirmationDigest: plan.policy_digest,
+    evidence: buildDemoEvidence(plan, { now: NOW }),
+    nonce: "zero-slippage-nonce",
+    now: NOW,
+  });
+  assert.equal(result.decision.outcome, "PASS");
+});
+
+test("price-impact BLOCK scenario refuses an unrepresentable 10000-bps cap", () => {
+  const plan = createPlan(buildDemoIntent({ max_price_impact_bps: 10_000 }), {
+    now: NOW,
+    id: "plan-max-impact",
+  });
+  assert.throws(
+    () => buildDemoEvidence(plan, {
+      scenario: "block-price-impact",
+      now: NOW,
+    }),
+    (error) => error.code === "SCENARIO_NOT_APPLICABLE",
+  );
+});
+
+for (const [field, expectedCode] of [
+  ["wallet", "WALLET_STALE"],
+  ["assets", "ASSET_STALE"],
+]) {
+  test(`stale ${field} evidence returns REVIEW`, () => {
+    const result = evaluate("pass", (evidence) => {
+      evidence[field].observed_at = new Date(
+        NOW.getTime() - 20_000,
+      ).toISOString();
+    });
+    assert.equal(result.decision.outcome, "REVIEW");
+    assert.equal(result.decision.code, expectedCode);
+  });
+}
+
+test("non-boolean simulation success can never PASS", () => {
+  const result = evaluate("pass", (evidence) => {
+    evidence.simulation.successful = "false";
+    evidence.simulation.error_code = "PROGRAM_ERROR";
+  });
+  assert.equal(result.decision.outcome, "REVIEW");
+  assert.equal(result.decision.code, "SIMULATION_STATUS_INVALID");
+});
+
+test("chain evidence must bind the exact message blockhash", () => {
+  const result = evaluate("pass", (evidence) => {
+    evidence.chain.recent_blockhash =
+      "DifferentFixtureBlockhash11111111111111111111111";
+  });
+  assert.equal(result.decision.outcome, "REVIEW");
+  assert.equal(result.decision.code, "BLOCKHASH_BINDING_MISMATCH");
+});
+
+for (const [mutate, expectedCode] of [
+  [
+    (evidence) => { evidence.assets.sell.decimals = 9; },
+    "SELL_DECIMALS_MISMATCH",
+  ],
+  [
+    (evidence) => { evidence.assets.buy.decimals = 6; },
+    "BUY_DECIMALS_MISMATCH",
+  ],
+  [
+    (evidence) => {
+      evidence.assets.sell.token_program =
+        "11111111111111111111111111111111";
+    },
+    "TOKEN_PROGRAM_MISMATCH",
+  ],
+]) {
+  test(`asset metadata mismatch ${expectedCode} blocks`, () => {
+    const result = evaluate("pass", mutate);
+    assert.equal(result.decision.outcome, "BLOCK");
+    assert.equal(result.decision.code, expectedCode);
+  });
+}

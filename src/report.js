@@ -11,13 +11,14 @@ export function formatDecision(record, { details = false } = {}) {
     "",
     "Mandate",
     `Swap exactly ${policy.economics.exact_sell_amount_display} ${policy.assets.sell.symbol} for at least ${policy.economics.minimum_receive_display} ${policy.assets.buy.symbol} on ${policy.network.chain_name}.`,
-    `Maximum network fee: ${policy.economics.max_network_fee_display} SOL. One use; same-wallet settlement only.`,
+    `Limits: ${policy.economics.max_slippage_bps} bps slippage; ${policy.economics.max_price_impact_bps} bps price impact; ${policy.economics.max_network_fee_display} SOL network fee; ${policy.economics.max_priority_fee_display} SOL priority fee.`,
+    "One use; output must return to the same wallet.",
     "",
     "Exact proposal",
   ];
   if (evidence) {
     lines.push(
-      `Builder: ${evidence.quote.builder}; receive ${atomicToDecimal(evidence.simulation.buy_credit_atomic, SOLANA_PROFILE.buy_decimals)} SOL; fee ${atomicToDecimal(evidence.simulation.network_fee_atomic, SOLANA_PROFILE.buy_decimals)} SOL.`,
+      `Local route fixture: ${evidence.quote.builder}; receive ${atomicToDecimal(evidence.simulation.buy_credit_atomic, SOLANA_PROFILE.buy_decimals)} SOL; fee ${atomicToDecimal(evidence.simulation.network_fee_atomic, SOLANA_PROFILE.buy_decimals)} SOL.`,
     );
   } else {
     lines.push("No proposal was evaluated.");
@@ -28,13 +29,13 @@ export function formatDecision(record, { details = false } = {}) {
   );
   if (decision.recovery) lines.push(`Recovery: ${decision.recovery}`);
   if (evidence) {
-    lines.push(
-      `Checked: ${record.checks.join(", ")} at ${evidence.collected_at}.`,
-    );
+    lines.push(record.checks.length > 0
+      ? `Checked: ${record.checks.join(", ")} at ${evidence.collected_at}.`
+      : `Evidence reviewed at ${evidence.collected_at}; no policy check was treated as complete.`);
   }
   lines.push(
     `Boundary: ${record.boundary.statement}`,
-    `Receipt: ${verifyRecord(record).verified ? "local integrity verified" : "verification failed"}.`,
+    `Receipt: ${verifyRecord(record).verified ? "local fixture integrity only" : "verification failed"}.`,
   );
   if (details) {
     lines.push(
@@ -80,7 +81,7 @@ export function renderHtml(record) {
     <div class="fact"><b>Mandate</b>${escapeHtml(record.plan.policy.economics.exact_sell_amount_display)} USDC → at least ${escapeHtml(record.plan.policy.economics.minimum_receive_display)} SOL</div>
     <div class="fact"><b>Network</b>Solana Mainnet · self-recipient</div>
     <div class="fact"><b>Builder</b>${escapeHtml(record.evidence?.quote?.builder ?? "Not reached")}</div>
-    <div class="fact"><b>Receipt</b>${verification.verified ? "Local integrity verified" : "Verification failed"}</div>
+    <div class="fact"><b>Receipt</b>${verification.verified ? "Local fixture integrity only" : "Verification failed"}</div>
   </div>
   <p><b>Why:</b> ${escapeHtml(record.decision.reason)}</p>
   ${record.decision.recovery ? `<p><b>Recovery:</b> ${escapeHtml(record.decision.recovery)}</p>` : ""}

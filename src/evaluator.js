@@ -1,7 +1,8 @@
-import { digest } from "./canonical.js";
-import { DECISIONS } from "./constants.js";
+import { digest, isDigest } from "./canonical.js";
+import { DECISIONS, SOLANA_PROFILE } from "./constants.js";
 import { normalizeEvidence, allowedFixturePrograms } from "./evidence.js";
 import { asGuardError } from "./errors.js";
+import { validatePlan } from "./policy.js";
 
 export function evaluateProposal({
   plan,
@@ -10,13 +11,12 @@ export function evaluateProposal({
   nonce,
   now = new Date(),
 }) {
+  validatePlan(plan);
   const base = {
     plan,
     confirmation: {
-      supplied_digest:
-        typeof confirmationDigest === "string"
-          ? confirmationDigest
-          : digest("missing-confirmation"),
+      supplied_digest: safeConfirmationDigest(confirmationDigest),
+      supplied_was_valid_digest: isDigest(confirmationDigest),
       matched: confirmationDigest === plan.policy_digest,
     },
     nonce,
@@ -68,7 +68,7 @@ export function evaluateProposal({
       decision: decision(
         DECISIONS.REVIEW,
         normalized.freshness_issues[0].code,
-        "Fresh, matching chain, quote, reference, and simulation evidence was not available.",
+        "Fresh, matching fixture evidence was not available.",
         "Rebuild and re-simulate the exact message against a fresh blockhash.",
       ),
     };
@@ -107,10 +107,38 @@ export function evaluateProposal({
     failures,
   );
   checkEqual(
+    normalized.assets.sell.mint,
+    policy.assets.sell.mint,
+    "SELL_MINT_MISMATCH",
+    "The sell-token mint differs from the mandate.",
+    failures,
+  );
+  checkEqual(
+    normalized.assets.sell.decimals,
+    policy.assets.sell.decimals,
+    "SELL_DECIMALS_MISMATCH",
+    "The sell-token decimals differ from the mandate.",
+    failures,
+  );
+  checkEqual(
+    normalized.assets.sell.token_program,
+    SOLANA_PROFILE.fixture_program_registry.spl_token,
+    "TOKEN_PROGRAM_MISMATCH",
+    "The sell token uses an unexpected token program.",
+    failures,
+  );
+  checkEqual(
     normalized.assets.buy.caip19,
     policy.assets.buy.caip19,
     "BUY_ASSET_MISMATCH",
     "The buy asset identity does not match the mandate.",
+    failures,
+  );
+  checkEqual(
+    normalized.assets.buy.decimals,
+    policy.assets.buy.decimals,
+    "BUY_DECIMALS_MISMATCH",
+    "The buy-asset decimals differ from the mandate.",
     failures,
   );
   if (normalized.assets.sell.token_extensions.length > 0) {
@@ -152,7 +180,7 @@ export function evaluateProposal({
     failures.push({
       code: "MINIMUM_RECEIVE_VIOLATED",
       reason:
-        "The proposed minimum receive is below the user limit recomputed from independent reference evidence.",
+        "The proposed minimum receive is below the user limit recomputed from the local reference fixture.",
     });
   }
   if (
@@ -250,7 +278,14 @@ export function evaluateProposal({
       reason: "Simulation contains an instruction that was not decoded.",
     });
   }
-  inspectDecodedMessage(normalized.message.decoded, policy, failures, reviews);
+  inspectDecodedMessage(
+    normalized.message.decoded,
+    normalized.quote,
+    normalized.simulation,
+    policy,
+    failures,
+    reviews,
+  );
 
   result.checks = checked;
   result.authorized_minimum_receive_atomic = authorizedMinimum;
@@ -272,11 +307,20 @@ export function evaluateProposal({
     result.decision = decision(
       DECISIONS.PASS,
       "SIMULATED_EXACT_PROPOSAL_PASS",
-      "The exact fixture proposal satisfies every authorized constraint.",
+      "Every displayed constraint passed for this exact local fixture.",
       null,
     );
   }
   return result;
+}
+
+function safeConfirmationDigest(value) {
+  return isDigest(value)
+    ? value
+    : digest({
+        supplied_confirmation_fingerprint:
+          typeof value === "string" ? value : "missing-confirmation",
+      });
 }
 
 export function computeReferenceMinimum(referenceAtomic, maxSlippageBps) {
@@ -287,7 +331,14 @@ export function computeReferenceMinimum(referenceAtomic, maxSlippageBps) {
   ).toString();
 }
 
-function inspectDecodedMessage(message, policy, failures, reviews) {
+function inspectDecodedMessage(
+  message,
+  quote,
+  simulation,
+  policy,
+  failures,
+  reviews,
+) {
   checkEqual(
     message.fee_payer,
     policy.authority.wallet_account,
@@ -313,6 +364,8 @@ function inspectDecodedMessage(message, policy, failures, reviews) {
     });
   }
   const allowed = allowedFixturePrograms();
+  let computeOperationCount = 0;
+  let swapOperationCount = 0;
   for (const instruction of message.instructions) {
     if (!allowed.has(instruction.program_id)) {
       reviews.push({
@@ -327,6 +380,23 @@ function inspectDecodedMessage(message, policy, failures, reviews) {
       });
     }
     const operation = instruction.decoded_operation;
+    if (operation.type === "set_compute_unit_price") {
+      computeOperationCount += 1;
+      checkEqual(
+        instruction.program_id,
+        SOLANA_PROFILE.fixture_program_registry.compute_budget,
+        "COMPUTE_PROGRAM_MISMATCH",
+        "The compute-budget operation uses an unexpected program.",
+        failures,
+      );
+      checkEqual(
+        operation.priority_fee_atomic,
+        simulation.priority_fee_atomic,
+        "PRIORITY_FEE_MESSAGE_MISMATCH",
+        "The decoded priority fee differs from the simulated fee.",
+        failures,
+      );
+    }
     if (
       ["approve", "delegate", "transfer", "bridge", "sign_message"].includes(
         operation.type,
@@ -338,11 +408,47 @@ function inspectDecodedMessage(message, policy, failures, reviews) {
       });
     }
     if (operation.type === "swap_exact_in") {
+      swapOperationCount += 1;
+      checkEqual(
+        instruction.program_id,
+        SOLANA_PROFILE.fixture_program_registry.jupiter_v6,
+        "SWAP_PROGRAM_MISMATCH",
+        "The fixture swap uses an unexpected program.",
+        failures,
+      );
+      checkEqual(
+        operation.builder,
+        policy.route.allowed_builder,
+        "MESSAGE_BUILDER_MISMATCH",
+        "The message builder differs from the mandate.",
+        failures,
+      );
+      checkEqual(
+        operation.sell_asset,
+        policy.assets.sell.caip19,
+        "MESSAGE_SELL_ASSET_MISMATCH",
+        "The message sell asset differs from the mandate.",
+        failures,
+      );
+      checkEqual(
+        operation.buy_asset,
+        policy.assets.buy.caip19,
+        "MESSAGE_BUY_ASSET_MISMATCH",
+        "The message buy asset differs from the mandate.",
+        failures,
+      );
       checkEqual(
         operation.sell_amount_atomic,
         policy.economics.exact_sell_amount_atomic,
         "MESSAGE_SELL_AMOUNT_MISMATCH",
         "The message sell amount differs from the mandate.",
+        failures,
+      );
+      checkEqual(
+        operation.minimum_receive_atomic,
+        quote.minimum_receive_atomic,
+        "MESSAGE_MINIMUM_RECEIVE_MISMATCH",
+        "The message minimum receive differs from the evaluated quote.",
         failures,
       );
       checkEqual(
@@ -353,6 +459,13 @@ function inspectDecodedMessage(message, policy, failures, reviews) {
         failures,
       );
     }
+  }
+  if (computeOperationCount !== 1 || swapOperationCount !== 1) {
+    reviews.push({
+      code: "REQUIRED_OPERATION_SET_MISSING",
+      reason:
+        "The exact fixture must contain one compute-budget operation and one exact-input swap.",
+    });
   }
   for (const program of message.inner_program_ids) {
     if (!allowed.has(program)) {

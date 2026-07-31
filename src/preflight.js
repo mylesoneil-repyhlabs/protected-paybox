@@ -1,13 +1,14 @@
 import path from "node:path";
-import { digest } from "./canonical.js";
+import { digest, isDigest } from "./canonical.js";
 import { evaluateProposal } from "./evaluator.js";
 import { GuardError } from "./errors.js";
-import { createRecord } from "./receipt.js";
+import { createRecord, verifyRecord } from "./receipt.js";
 import {
+  assertPrivateRegularFile,
   ensurePrivateDirectory,
   fileExists,
   readJsonFile,
-  writePrivateJson,
+  writePrivateJsonOnce,
 } from "./io.js";
 
 const inflight = new Map();
@@ -85,48 +86,118 @@ async function runSerialized(input) {
     };
   }
 
-  const semanticDigest = digest({
-    policy_digest: plan.policy_digest,
-    confirmation_digest: confirmationDigest,
-    evidence_message_digest: evidence?.message?.message_sha256 ?? null,
-    wallet_account: evidence?.wallet?.account ?? null,
-    chain_id: evidence?.chain?.chain_id ?? null,
-  });
+  // Re-evaluate before consulting history so an expired mandate or evidence
+  // that has become stale can never inherit a historical PASS.
+  const evaluation = evaluateProposal(input);
+  if (evaluation.decision.code === "MANDATE_EXPIRED") {
+    return { record: createRecord(evaluation, { now }), replayed: false };
+  }
+
+  let semanticDigest;
+  try {
+    semanticDigest = digest({
+      policy_digest: plan.policy_digest,
+      confirmation_digest: confirmationDigest,
+      evidence_digest: digest(evidence),
+    });
+  } catch {
+    return { record: createRecord(evaluation, { now }), replayed: false };
+  }
+  evaluation.requestBindingDigest = semanticDigest;
+  const record = createRecord(evaluation, { now });
 
   if (historyDirectory) {
     await ensurePrivateDirectory(historyDirectory);
     const storedPath = storagePath(historyDirectory, nonce);
     if (await fileExists(storedPath)) {
-      const stored = await readJsonFile(storedPath, "stored nonce record");
-      if (stored.semantic_digest !== semanticDigest) {
-        const evaluation = earlyDecision({
-          plan,
-          confirmationDigest,
-          nonce,
-          outcome: "BLOCK",
-          code: "NONCE_REUSE_MISMATCH",
-          reason:
-            "This one-use nonce is already bound to different proposal semantics.",
-          recovery: "Create a new nonce. The stored proposal cannot be replaced.",
-        });
-        return {
-          record: createRecord(evaluation, { now }),
-          replayed: false,
-        };
-      }
-      return { record: stored.record, replayed: true };
+      const stored = await readStoredNonceRecord(storedPath);
+      return resolveStoredRecord({
+        stored,
+        semanticDigest,
+        currentRecord: record,
+        plan,
+        confirmationDigest,
+        nonce,
+        now,
+      });
     }
-  }
 
-  const evaluation = evaluateProposal(input);
-  const record = createRecord(evaluation, { now });
-  if (historyDirectory) {
-    await writePrivateJson(storagePath(historyDirectory, nonce), {
+    const created = await writePrivateJsonOnce(storedPath, {
       semantic_digest: semanticDigest,
       record,
     });
+    if (!created) {
+      const stored = await readStoredNonceRecord(storedPath);
+      return resolveStoredRecord({
+        stored,
+        semanticDigest,
+        currentRecord: record,
+        plan,
+        confirmationDigest,
+        nonce,
+        now,
+      });
+    }
   }
   return { record, replayed: false };
+}
+
+async function readStoredNonceRecord(storedPath) {
+  await assertPrivateRegularFile(storedPath);
+  const stored = await readJsonFile(storedPath, "stored nonce record");
+  const keys =
+    stored && typeof stored === "object" && !Array.isArray(stored)
+      ? Object.keys(stored).sort()
+      : [];
+  if (
+    keys.length !== 2 ||
+    keys[0] !== "record" ||
+    keys[1] !== "semantic_digest" ||
+    typeof stored.semantic_digest !== "string" ||
+    !/^[a-f0-9]{64}$/.test(stored.semantic_digest) ||
+    stored.record?.request_binding_digest !== stored.semantic_digest ||
+    verifyRecord(stored.record).verified !== true
+  ) {
+    throw new GuardError(
+      "HISTORY_RECORD_INVALID",
+      "Stored nonce history failed its structure or integrity check.",
+    );
+  }
+  return stored;
+}
+
+function resolveStoredRecord({
+  stored,
+  semanticDigest,
+  currentRecord,
+  plan,
+  confirmationDigest,
+  nonce,
+  now,
+}) {
+  if (stored.semantic_digest !== semanticDigest) {
+    const evaluation = earlyDecision({
+      plan,
+      confirmationDigest,
+      nonce,
+      outcome: "BLOCK",
+      code: "NONCE_REUSE_MISMATCH",
+      reason:
+        "This one-use nonce is already bound to different proposal semantics.",
+      recovery: "Create a new nonce. The stored proposal cannot be replaced.",
+    });
+    return {
+      record: createRecord(evaluation, { now }),
+      replayed: false,
+    };
+  }
+  if (
+    stored.record?.decision?.outcome !== currentRecord.decision.outcome ||
+    stored.record?.decision?.code !== currentRecord.decision.code
+  ) {
+    return { record: currentRecord, replayed: false };
+  }
+  return { record: stored.record, replayed: true };
 }
 
 function storagePath(directory, nonce) {
@@ -145,10 +216,15 @@ function earlyDecision({
   return {
     plan,
     confirmation: {
-      supplied_digest:
-        typeof confirmationDigest === "string"
-          ? confirmationDigest
-          : digest("missing-confirmation"),
+      supplied_digest: isDigest(confirmationDigest)
+        ? confirmationDigest
+        : digest({
+            supplied_confirmation_fingerprint:
+              typeof confirmationDigest === "string"
+                ? confirmationDigest
+                : "missing-confirmation",
+          }),
+      supplied_was_valid_digest: isDigest(confirmationDigest),
       matched: confirmationDigest === plan.policy_digest,
     },
     nonce,

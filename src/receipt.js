@@ -5,6 +5,13 @@ import { sanitize } from "./sanitize.js";
 
 export function createRecord(evaluation, { now = new Date() } = {}) {
   const evidence = evaluation.normalizedEvidence;
+  const requestBindingDigest =
+    evaluation.requestBindingDigest ??
+    digest({
+      policy_digest: evaluation.plan.policy_digest,
+      confirmation_digest: evaluation.confirmation.supplied_digest,
+      evidence_digest: evidence?.evidence_digest ?? digest("no-evidence"),
+    });
   const base = sanitize({
     schema_version: SCHEMAS.RECORD,
     generated_at: new Date(now).toISOString(),
@@ -16,6 +23,7 @@ export function createRecord(evaluation, { now = new Date() } = {}) {
       policy_digest: evaluation.plan.policy_digest,
     },
     confirmation: evaluation.confirmation,
+    request_binding_digest: requestBindingDigest,
     proposal: evidence
       ? {
           tool_contract: evidence.tool_contract,
@@ -75,6 +83,12 @@ export function verifyRecord(record) {
   if (digest(withoutRecordDigest) !== suppliedRecordDigest) {
     return { verified: false, reason: "Record content no longer matches its digest." };
   }
+  if (digest(record.plan?.policy) !== record.plan?.policy_digest) {
+    return {
+      verified: false,
+      reason: "The recorded policy does not match its claimed digest.",
+    };
+  }
   if (record.receipt?.schema_version !== SCHEMAS.RECEIPT) {
     return { verified: false, reason: "Receipt schema is unsupported." };
   }
@@ -111,7 +125,7 @@ export function verifyRecord(record) {
     outcome: record.decision.outcome,
     receipt_digest: suppliedReceiptDigest,
     statement:
-      "Local integrity verified. This is not a production Delta signature or PayBox execution receipt.",
+      "Local fixture integrity only. This is not a production Delta signature or PayBox execution receipt.",
   };
 }
 
@@ -123,6 +137,7 @@ function deriveBindings(base) {
       policy_digest: base.plan.policy_digest,
       confirmation: base.confirmation,
     }),
+    request_binding_digest: base.request_binding_digest,
     proposal_digest: digest(base.proposal),
     evidence_digest: digest(base.evidence),
     message_sha256: base.proposal?.message?.message_sha256 ?? digest("no-message"),

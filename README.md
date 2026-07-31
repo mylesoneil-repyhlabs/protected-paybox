@@ -30,10 +30,10 @@ fixture:
 PROTECTED PAYBOX · SIMULATED FIXTURE · NO SIGNATURE · NO BROADCAST
 
 BLOCK — The proposed minimum receive is below the user limit recomputed from
-independent reference evidence.
+the local reference fixture.
 
 Boundary: SIMULATION ONLY · NO PAYBOX CONTACT · NO SIGNATURE · NO TRANSACTION
-Receipt: local integrity verified.
+Receipt: local fixture integrity only.
 ```
 
 The companion `PASS` proves only that the exact local fixture satisfied the
@@ -100,6 +100,9 @@ If Node is not on the login `PATH`, point the runner at an executable:
 PROTECTED_PAYBOX_NODE_BINARY=/absolute/path/to/node ./run demo --scenario pass
 ```
 
+The runner also checks the Codex runtime cache and the standard ChatGPT macOS
+app runtime before asking for a Node path.
+
 Compile a private custom plan:
 
 ```bash
@@ -107,6 +110,21 @@ Compile a private custom plan:
   --intent "$(pwd)/examples/solana-usdc-to-sol-intent.json" \
   --details
 ```
+
+After reviewing the displayed mandate and authorizing it separately, run a
+labeled fixture against the saved plan and exact displayed digest:
+
+```bash
+./run demo \
+  --plan /absolute/path/from-the-plan-command.json \
+  --confirm-policy <displayed-policy-digest> \
+  --scenario pass
+```
+
+That example expresses exactly 25 USDC, at least 0.18 SOL, 1% maximum
+slippage, a 0.00005 SOL network-fee cap, a separate 0.00002 SOL priority-fee
+cap, and same-wallet settlement. It remains synthetic and does not estimate a
+live market price.
 
 The CLI requires absolute paths for input files, rejects symlinks and files
 over 1 MiB, and writes optional artifacts as owner-only files.

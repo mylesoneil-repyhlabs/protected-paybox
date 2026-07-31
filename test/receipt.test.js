@@ -71,3 +71,29 @@ test("receipt explicitly disclaims production Delta proof", () => {
   assert.equal(record.receipt.verifier.production_delta_proof, false);
   assert.match(verifyRecord(record).statement, /not a production Delta/i);
 });
+
+test("receipt binds one-use authorization and expiry without redacting policy semantics", () => {
+  const record = recordFor();
+  assert.equal(record.plan.policy.authorization.use_count, 1);
+  assert.equal(
+    record.receipt.bindings.policy_digest,
+    record.plan.policy_digest,
+  );
+  assert.match(record.plan.policy.authorization.expires_at, /Z$/);
+});
+
+test("invalid confirmation content is fingerprinted and never sealed raw", () => {
+  const plan = createPlan(buildDemoIntent(), { now: NOW, id: "plan-secret" });
+  const secretLike =
+    "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJub3QtYS1yZWFsLXRva2VuIn0.signaturepart";
+  const evaluation = evaluateProposal({
+    plan,
+    confirmationDigest: secretLike,
+    evidence: buildDemoEvidence(plan, { now: NOW }),
+    nonce: "receipt-secret-nonce",
+    now: NOW,
+  });
+  const serialized = JSON.stringify(createRecord(evaluation, { now: NOW }));
+  assert.doesNotMatch(serialized, /eyJhbGci/);
+  assert.equal(evaluation.confirmation.supplied_was_valid_digest, false);
+});

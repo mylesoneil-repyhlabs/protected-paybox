@@ -1,5 +1,5 @@
 const SENSITIVE_KEY =
-  /(authorization|cookie|credential|oauth|passphrase|private[_-]?key|secret|seed|session[_-]?key|token)$/i;
+  /(?:^|[_-])(?:authorization_header|cookie|credential|oauth(?:[_-]?token)?|passphrase|private[_-]?key|secret|seed|session[_-]?key|access[_-]?token|refresh[_-]?token|api[_-]?key)$/i;
 
 export function sanitize(value, { depth = 0 } = {}) {
   if (depth > 30) return "[REDACTED:DEPTH]";
@@ -32,6 +32,7 @@ function looksSecretLike(value) {
   return (
     /-----BEGIN (?:EC |RSA |OPENSSH )?PRIVATE KEY-----/.test(value) ||
     /\b(?:Bearer|Basic)\s+[A-Za-z0-9._~+/=-]{16,}/i.test(value) ||
-    /\b(?:ows_key_|sk_live_|pk_live_)[A-Za-z0-9_-]{16,}/.test(value)
+    /\b(?:ows_key_|sk_live_|pk_live_)[A-Za-z0-9_-]{16,}/.test(value) ||
+    /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/.test(value)
   );
 }

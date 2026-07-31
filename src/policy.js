@@ -1,8 +1,21 @@
 import { randomUUID } from "node:crypto";
-import { digest } from "./canonical.js";
+import { assertExactKeys, digest } from "./canonical.js";
 import { PUBLIC_BOUNDARY, SCHEMAS, SOLANA_PROFILE } from "./constants.js";
 import { atomicToDecimal } from "./decimal.js";
+import { GuardError } from "./errors.js";
 import { validateIntent } from "./validation.js";
+
+const PLAN_KEYS = [
+  "schema_version",
+  "plan_id",
+  "created_at",
+  "source_intent_digest",
+  "intent",
+  "policy",
+  "policy_digest",
+  "status",
+  "boundary",
+];
 
 export function createPlan(
   input,
@@ -62,6 +75,10 @@ export function createPlan(
         SOLANA_PROFILE.buy_decimals,
       ),
       max_priority_fee_atomic: intent.max_priority_fee_atomic,
+      max_priority_fee_display: atomicToDecimal(
+        intent.max_priority_fee_atomic,
+        SOLANA_PROFILE.buy_decimals,
+      ),
       held_funds_only: true,
     },
     route: {
@@ -111,13 +128,70 @@ export function formatMandate(plan) {
     `Network: ${policy.network.chain_name} (${policy.network.chain_id})`,
     `Wallet: ${shortAddress(policy.authority.wallet_account)}; output must return to the same wallet`,
     `Builder: ${policy.route.allowed_builder}; every Solana instruction and inner call must be decoded and allowlisted`,
-    `Limits: ≤${policy.economics.max_slippage_bps} bps slippage; ≤${policy.economics.max_price_impact_bps} bps price impact; ≤${policy.economics.max_network_fee_display} SOL network fee`,
+    `Limits: ≤${policy.economics.max_slippage_bps} bps slippage; ≤${policy.economics.max_price_impact_bps} bps price impact; ≤${policy.economics.max_network_fee_display} SOL network fee; ≤${policy.economics.max_priority_fee_display} SOL priority fee`,
     "Forbidden: approvals/delegation, bridges, transfers, arbitrary programs, message signing, scheduling, or additional actions",
     `Validity: one use; expires ${policy.authorization.expires_at}`,
     "",
-    'Reply "Authorize this mandate" to evaluate one exact simulated proposal.',
+    'In an agent chat, send "Authorize this mandate" as a separate message.',
+    "This CLI is non-interactive; authorization lets the agent submit one exact fixture to the separate simulate command.",
     "No PayBox call, signature, transaction, or money movement is available.",
   ].join("\n");
+}
+
+export function validatePlan(plan) {
+  assertExactKeys(plan, PLAN_KEYS, "plan");
+  if (plan.schema_version !== SCHEMAS.PLAN) {
+    throw new GuardError("PLAN_SCHEMA_INVALID", "Plan schema is unsupported.");
+  }
+  if (
+    typeof plan.plan_id !== "string" ||
+    !/^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$/.test(plan.plan_id)
+  ) {
+    throw new GuardError("PLAN_ID_INVALID", "Plan identifier is invalid.");
+  }
+  const createdAt = new Date(plan.created_at);
+  if (
+    !Number.isFinite(createdAt.getTime()) ||
+    createdAt.toISOString() !== plan.created_at
+  ) {
+    throw new GuardError(
+      "PLAN_CREATED_AT_INVALID",
+      "Plan creation time must be a canonical ISO-8601 timestamp.",
+    );
+  }
+  if (plan.status !== "AWAITING_AUTHORIZATION") {
+    throw new GuardError(
+      "PLAN_STATUS_INVALID",
+      "Plan status must remain AWAITING_AUTHORIZATION before evaluation.",
+    );
+  }
+  const intent = validateIntent(plan.intent);
+  if (digest(intent) !== plan.source_intent_digest) {
+    throw new GuardError(
+      "PLAN_INTENT_DIGEST_MISMATCH",
+      "The plan intent no longer matches its source digest.",
+    );
+  }
+  const expected = createPlan(intent, {
+    now: createdAt,
+    id: plan.plan_id,
+  });
+  if (
+    digest(plan.policy) !== plan.policy_digest ||
+    plan.policy_digest !== expected.policy_digest
+  ) {
+    throw new GuardError(
+      "PLAN_POLICY_DIGEST_MISMATCH",
+      "The plan policy is not the closed policy derived from its intent.",
+    );
+  }
+  if (digest(plan.boundary) !== digest(PUBLIC_BOUNDARY)) {
+    throw new GuardError(
+      "PLAN_BOUNDARY_MISMATCH",
+      "The plan execution boundary was changed.",
+    );
+  }
+  return plan;
 }
 
 function shortAddress(value) {

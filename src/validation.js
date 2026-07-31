@@ -3,6 +3,8 @@ import { assertExactKeys } from "./canonical.js";
 import { GuardError } from "./errors.js";
 
 const BASE58_PATTERN = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+const BASE58_ALPHABET =
+  "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 const VENUE_PATTERN = /^[a-z0-9][a-z0-9._-]{1,63}$/;
 
 const INTENT_KEYS = [
@@ -59,6 +61,11 @@ export function validateIntent(input) {
       "allowed_builder must be a lowercase provider identifier.",
     );
   }
+  requireValue(
+    input.allowed_builder,
+    SOLANA_PROFILE.fixture_builder,
+    "allowed_builder",
+  );
   if (
     !Number.isInteger(input.expires_in_seconds) ||
     input.expires_in_seconds < 30 ||
@@ -89,13 +96,35 @@ export function validateIntent(input) {
 }
 
 export function normalizePublicKey(value, field = "public_key") {
-  if (typeof value !== "string" || !BASE58_PATTERN.test(value)) {
+  if (
+    typeof value !== "string" ||
+    !BASE58_PATTERN.test(value) ||
+    decodeBase58Length(value) !== 32
+  ) {
     throw new GuardError(
       "PUBLIC_KEY_INVALID",
-      `${field} must be a base58-encoded Solana public key.`,
+      `${field} must decode to exactly 32 bytes as a Solana public key.`,
     );
   }
   return value;
+}
+
+function decodeBase58Length(value) {
+  let decoded = 0n;
+  for (const character of value) {
+    const digit = BASE58_ALPHABET.indexOf(character);
+    if (digit < 0) return -1;
+    decoded = decoded * 58n + BigInt(digit);
+  }
+
+  let byteLength = 0;
+  while (decoded > 0n) {
+    byteLength += 1;
+    decoded >>= 8n;
+  }
+  let leadingZeroes = 0;
+  while (value[leadingZeroes] === "1") leadingZeroes += 1;
+  return byteLength + leadingZeroes;
 }
 
 export function validateHex(value, field, { allowEmpty = false } = {}) {

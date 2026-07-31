@@ -14,6 +14,6 @@
     "simulate": "node src/cli.js simulate",
     "verify": "node src/cli.js verify",
     "test": "node --test test/*.test.js",
-    "check:skill": "python3 /Users/grosvenoroneil/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/protected-paybox"
+    "check:skill": "node scripts/validate-skill.mjs"
   }
 }
