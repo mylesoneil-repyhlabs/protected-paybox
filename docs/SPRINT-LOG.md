@@ -1,7 +1,7 @@
 # Protected PayBox sprint log
 
-Status: Sprint 1 through Sprint 3 local implementation and QA complete;
-GitHub publication and independent re-download verification pending
+Status: Sprint 1 through Sprint 3 complete; v0.3.0 published, independently
+re-downloaded, and verified
 Date: 2026-07-30
 
 This log records implemented work and verified gates. Planned work is labeled
@@ -351,8 +351,8 @@ satisfy this gate.
 ## Sprint 3 — managed partner release and PayBox signing-boundary conformance
 kit
 
-State: local implementation, committed-archive validation, and independent
-review complete; GitHub publication and re-download pending
+State: complete; implementation, committed-archive validation, independent
+review, GitHub publication, and re-download verification pass
 Target release: `v0.3.0`
 
 ### PM requirement
@@ -444,7 +444,7 @@ enforce before signing, while keeping the public package non-signing.
 - [x] Local archive checksum, allowlisted manifest, installed behavior, and
       committed source agree.
 - [x] Documentation, README, package, tests, and committed archive agree.
-- [ ] GitHub tag, release asset, independent download, and checksum agree.
+- [x] GitHub tag, release asset, independent download, and checksum agree.
 
 Durable or distributed grant consumption, cryptographic issuer verification,
 PayBox client binding, restart persistence, revocation, ambiguous-broadcast
@@ -453,7 +453,7 @@ They are not implemented or claimed by the local simulator.
 
 ### Mini-sprint 3
 
-State: local gates complete; GitHub publication and re-download pending
+State: complete; local and external release gates pass
 
 Completed:
 
@@ -470,10 +470,15 @@ Completed:
    enforcement.
 6. Reconciled public claims and completed internal persona review.
 
-Remaining external gate:
+Completed external gate:
 
-1. Publish the matching GitHub tag and asset, then independently download,
-   checksum, install, and exercise that exact asset.
+1. Published tag and release `v0.3.0` at
+   `095a110b7af11775c43cd350e68b73bb8d526864`.
+2. Independently downloaded the ZIP and checksum from GitHub, matched both
+   local files byte for byte, verified ZIP SHA-256
+   `21437fbe79582cf2935dd9221684a8126e0a8e3fa48437a4e4e245d1915933a8`,
+   and passed the full restricted-`PATH`, source-deletion cold-install
+   validator.
 
 ## Stopping point
 

@@ -1,6 +1,6 @@
 # Protected PayBox claim ledger
 
-Status: current source-tree truth
+Status: v0.3.0 published and independently verified
 Date: 2026-07-30
 
 ## Status vocabulary
@@ -36,7 +36,7 @@ Date: 2026-07-30
 | A managed installer exists | `VERIFIED_CURRENT` | 17/17 installer tests; versioned owner-only copy, separate stable owner-only state, exact SHA-256 manifest, restricted-`PATH` discovery, idempotency, explicit integrity-checked upgrade, cross-version replay, ancestor-symlink rejection, and source-deletion checks | "The local package installs an integrity-checked private managed copy that remains usable after the extracted source is removed; stable replay state survives upgrade, and the unkeyed manifest is not publisher authentication." |
 | An allowlisted release pipeline exists | `VERIFIED_CURRENT` | Immutable GitHub Actions SHAs, metadata/link/content validators, allowlisted archive builder, checksum generator, and cold-install validator are present; skill, links, metadata, and source-content checks pass | "The repository contains pinned CI actions plus same-commit/same-toolchain archive-repeatability and cold-install validation scripts." |
 | A committed release archive has passed the local release gate | `VERIFIED_CURRENT` | Same-commit/same-toolchain double build, content scan, all 133 extracted tests, restricted-`PATH` cold install, source deletion, installed behavior, checksum, and independent audit | "The local committed-source archive passes the documented local release gate." |
-| The published GitHub asset matches the committed archive | `PENDING_VERIFICATION` | Publication and independent re-download have not yet been recorded | "GitHub artifact verification remains pending." |
+| The published GitHub asset matches the committed archive | `VERIFIED_CURRENT` | Tag `v0.3.0` resolves to `095a110b7af11775c43cd350e68b73bb8d526864`; the published ZIP reports GitHub digest `sha256:21437fbe79582cf2935dd9221684a8126e0a8e3fa48437a4e4e245d1915933a8`; an independent download matched the local archive byte for byte, passed the checksum, and passed the full cold-install validator | "The published v0.3.0 ZIP matches the verified committed archive." |
 | The current build has PayBox OAuth integration | `LOCKED` | No OAuth client or session exists | "PayBox has not been connected from this repository." |
 | An offline PayBox tool-surface inspector exists | `VERIFIED_CURRENT` | `inspect-tools`, bounded parser, risk classifier, redacted deterministic snapshot, CLI and module tests | "Protected PayBox can conservatively analyze a saved tools/list capture offline; it does not contact or authenticate PayBox." |
 | The PayBox MCP tool surface has been captured here | `UNKNOWN` | No authenticated contract artifact exists in this repository | "Authenticated tool discovery remains a future live-integration gate." |
@@ -126,9 +126,9 @@ The checksum is unkeyed. An active editor can change a record and recompute
 it, so it is not a Delta signature, provider-authenticity proof, or
 adversarial tamper protection. The CLI compares a confirmation digest but
 cannot authenticate chat authorship. The skill can be bypassed if another
-PayBox mutation tool remains available. The committed archive and independent
-local Mini-sprint 3 review pass; a GitHub asset is not claimed until
-publication and independent re-download are verified.
+PayBox mutation tool remains available. The committed archive, independent
+Mini-sprint 3 review, published `v0.3.0` asset, checksum, byte comparison, and
+independent cold-install re-download verification pass.
 
 ### Future live-preflight candidate wording
 
@@ -165,10 +165,11 @@ Implemented evidence:
 - always-locked production composition; and
 - explicit partner responsibility and deferred production gates.
 
-Still required before release or enforcement wording:
+The deterministic archive/checksum gate, independent Mini-sprint 3 review,
+GitHub publication, and independent artifact re-download are complete.
 
-- committed deterministic archive/checksum validation;
-- independent Mini-sprint 3 review and later GitHub artifact re-download;
+Still required before enforcement wording:
+
 - cryptographic issuer proof and provider-authenticated reconstruction;
 - durable cross-process and cross-region consumption;
 - restart, revocation, recovery, and uncertain-submission conformance against

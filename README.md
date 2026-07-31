@@ -88,7 +88,19 @@ opaque tool schemas fail closed.
 
 Requirements: macOS or Linux and Node.js 22+.
 
-From an extracted release or repository checkout:
+Download the verified
+[v0.3.0 release](https://github.com/mylesoneil-repyhlabs/protected-paybox/releases/tag/v0.3.0),
+including the
+[ZIP](https://github.com/mylesoneil-repyhlabs/protected-paybox/releases/download/v0.3.0/protected-paybox-v0.3.0.zip)
+and its
+[checksum file](https://github.com/mylesoneil-repyhlabs/protected-paybox/releases/download/v0.3.0/protected-paybox-v0.3.0.zip.sha256).
+The ZIP SHA-256 is:
+
+```text
+21437fbe79582cf2935dd9221684a8126e0a8e3fa48437a4e4e245d1915933a8
+```
+
+From the extracted release or a repository checkout:
 
 ```bash
 ./install
@@ -247,9 +259,12 @@ npm run conformance:hook
 The committed-source archive has also passed same-commit, same-toolchain
 byte-repeatability, credential scanning, all 133 tests from the extracted
 archive, restricted-`PATH` cold install, source deletion, installed demo and
-offline-inspector checks, and the public execution lock. Independent security
-and release audits found no remaining local release blocker. No independently
-downloaded GitHub artifact is claimed here.
+offline-inspector checks, and the public execution lock. The published
+`v0.3.0` ZIP was independently re-downloaded from GitHub, matched the local
+archive byte for byte, passed its published SHA-256 checksum, and passed the
+same full cold-install validator. GitHub also reports the matching
+`sha256:21437fbe79582cf2935dd9221684a8126e0a8e3fa48437a4e4e245d1915933a8`
+asset digest.
 
 ## Documentation
 

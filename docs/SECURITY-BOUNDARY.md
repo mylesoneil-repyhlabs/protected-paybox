@@ -1,7 +1,7 @@
 # Protected PayBox security boundary
 
-Status: v0.3.0 local release gates complete; live execution locked;
-GitHub publication and independent re-download verification pending
+Status: v0.3.0 published, independently re-downloaded, and verified; live
+execution locked
 Date: 2026-07-30
 
 ## Current boundary
@@ -414,11 +414,20 @@ byte-repeatability, archive content scanning, all 133 extracted tests,
 restricted-`PATH` cold install, source deletion, installed behavior, and
 independent security/release review.
 
-Still pending before the external release gate can be marked complete:
+The external release gate is complete:
 
-- publish the matching GitHub tag and asset; and
-- independently re-download the GitHub asset and verify its checksum and
-  installed behavior.
+- tag and release `v0.3.0` resolve to committed source
+  `095a110b7af11775c43cd350e68b73bb8d526864`;
+- the published ZIP reports GitHub digest
+  `sha256:21437fbe79582cf2935dd9221684a8126e0a8e3fa48437a4e4e245d1915933a8`;
+  and
+- an independent re-download matched the local archive byte for byte, passed
+  its checksum, and passed the full restricted-`PATH`, source-deletion
+  cold-install validator.
+
+This release evidence does not change the live enforcement boundary. PayBox
+and production Delta remain unintegrated, and signing, broadcast, and funds
+movement remain locked.
 
 The README must describe current verified functionality only. Historical
 detail belongs in tags, releases, changelog, or sprint log.

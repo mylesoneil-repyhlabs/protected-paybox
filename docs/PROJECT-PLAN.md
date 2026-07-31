@@ -1,7 +1,7 @@
 # Protected PayBox project plan
 
-Status: Sprint 1 through Sprint 3 local implementation and QA complete;
-GitHub publication and independent re-download verification pending
+Status: Sprint 1 through Sprint 3 complete; v0.3.0 published, independently
+re-downloaded, and verified
 Date: 2026-07-30
 Owner: delta product and engineering
 Target repository: personal GitHub, separate from Coinbase Guard
@@ -592,8 +592,8 @@ merely because `inspect-tools` accepts a saved capture. It still requires:
 ## Sprint 3: installable partner release and signing-boundary conformance kit
 
 Release target: `v0.3.0`
-State: local implementation, committed-archive validation, and independent
-Mini-sprint 3 review complete; GitHub publication and re-download pending
+State: complete; implementation, committed-archive validation, independent
+Mini-sprint 3 review, GitHub publication, and re-download verification pass
 
 Sprint 3 does not enable public signing. It packages the prototype
 reproducibly and turns the evidence contract into the asset used to pitch a
@@ -666,7 +666,7 @@ native PayBox integration.
       behavior, and execution lock agree.
 - [x] Complete independent Mini-sprint 3 security, release, and internal
       persona QA.
-- [ ] Verify the GitHub tag and independently downloaded release asset agree
+- [x] Verify the GitHub tag and independently downloaded release asset agree
       with the final committed source and checksum.
 
 Durable or distributed grant consumption, authenticated issuer proof, PayBox
@@ -676,7 +676,7 @@ the local conformance simulator.
 
 ### Sprint 3 mini-sprint
 
-State: local gates complete; GitHub publication and re-download pending
+State: complete; local and external release gates pass
 
 Completed local work:
 
@@ -692,10 +692,15 @@ Completed local work:
    provider response, durable replay store, or live integration.
 6. Reconciled README and all claim/security documents to current evidence.
 
-Remaining external gate:
+Completed external gate:
 
-1. Publish the matching tag and asset, then independently download the GitHub
-   asset and verify its checksum and behavior.
+1. Published tag and release `v0.3.0` at
+   `095a110b7af11775c43cd350e68b73bb8d526864`.
+2. Independently downloaded the ZIP and checksum from GitHub, matched both
+   local files byte for byte, verified ZIP SHA-256
+   `21437fbe79582cf2935dd9221684a8126e0a8e3fa48437a4e4e245d1915933a8`,
+   and passed the full restricted-`PATH`, source-deletion cold-install
+   validator.
 
 ## Good stopping point
 
