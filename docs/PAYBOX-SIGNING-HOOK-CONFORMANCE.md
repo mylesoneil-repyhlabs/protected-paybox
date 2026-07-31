@@ -1,6 +1,6 @@
 # PayBox signing-hook conformance hypothesis
 
-Status: local interface hypothesis; no PayBox or Delta integration  
+Status: local interface hypothesis; no PayBox or Delta integration
 Date: 2026-07-30
 
 ## What this asset is
