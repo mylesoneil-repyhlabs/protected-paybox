@@ -20,7 +20,7 @@ The machine-readable source of truth is
 | Section | Purpose |
 | --- | --- |
 | `provenance` | Authority class and explicit network-contact flags |
-| `provider_contract` | Exact placeholder for the unobserved PayBox card contract |
+| `provider_contract` | Exact local-fixture descriptor for the published PayBox card contract; no remote call |
 | `merchant` | Canonical merchant key, domain, MCC, country, account reference |
 | `checkout` | Snapshot ID, SHA-256, observation time, expiry |
 | `items` | Exact lines plus extraction trace and scalar attributes |
@@ -52,7 +52,11 @@ authority.
 The current fixture contract deliberately requires
 `SELF_REPORTED_FIXTURE` and `paybox_contacted`, `merchant_contacted`, and
 `network_contacted` all set to false. It also binds an exact provider-contract
-placeholder stating that the authenticated PayBox card schema was not observed.
+fixture descriptor. PayBox now publicly documents `request_payment` and
+`claim_payment_credentials`; this evidence schema does not call them, ingest an
+account-discovered schema, read credentials, or claim a card. Public
+documentation and authenticated tool discovery do not upgrade fixture evidence
+to provider-authenticated financial truth.
 
 ## Generalized evidence extractor
 

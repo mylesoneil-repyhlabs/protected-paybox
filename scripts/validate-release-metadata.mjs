@@ -81,6 +81,9 @@ assert(
 for (const lockedBoundary of [
   "paybox_oauth_used: false",
   "paybox_contacted: false",
+  "paybox_oauth_available: true",
+  "authenticated_tool_discovery_available: true",
+  "remote_paybox_tool_calls_available: false",
   "private_delta_used: false",
   "signature_requested: false",
   "transaction_broadcast: false",
@@ -113,12 +116,15 @@ assert(
 const readme = await text("README.md");
 for (const requiredClaim of [
   "# Protected PayBox",
-  "credential-free and simulation-only",
+  "connect to a PayBox account through OAuth 2.1",
+  "The remote client has no",
+  "`tools/call` implementation",
+  "token is held only in memory",
   "cannot prove who authored the chat message",
   "mandatory Delta check inside PayBox's credential-release boundary",
   "Unkeyed SHA-256 self-consistency checksum",
   "Representative fixtures are not merchant coverage",
-  "payment-card support as Phase 2",
+  "`request_payment` and `claim_payment_credentials`",
 ]) {
   assert(
     readme.includes(requiredClaim),

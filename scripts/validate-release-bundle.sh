@@ -112,7 +112,7 @@ INSTALL_OUTPUT="$(
 printf '%s\n' "$INSTALL_OUTPUT" |
   grep -Fq "Installed Protected PayBox"
 printf '%s\n' "$INSTALL_OUTPUT" |
-  grep -Fq "credential-free simulation only"
+  grep -Fq "session-only PayBox OAuth discovery"
 
 INSTALLED_SKILL="$COLD_HOME/.agents/skills/protected-paybox"
 MANAGED_HARNESS="$COLD_HOME/.local/share/delta/protected-paybox/versions/v$PACKAGE_VERSION"
@@ -141,9 +141,9 @@ DOCTOR_OUTPUT="$(
     "$INSTALLED_SKILL/scripts/run" doctor
 )"
 for expected in \
-  "credential-free simulated fixture" \
-  "Execution: locked; no execution adapter" \
-  "PayBox/network contact: none"; do
+  "Mode: session-only PayBox OAuth discovery plus local fixtures" \
+  "Execution: locked; no payment, signing, swap, or broadcast adapter" \
+  "PayBox/network contact during doctor: none"; do
   printf '%s\n' "$DOCTOR_OUTPUT" | grep -Fq "$expected"
 done
 

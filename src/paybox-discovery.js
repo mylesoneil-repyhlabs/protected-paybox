@@ -17,6 +17,15 @@ export const PAYBOX_DISCOVERY_LIMITS = Object.freeze({
 
 const SNAPSHOT_SCHEMA = "protected-paybox/paybox-tool-snapshot/v1";
 const BLOCKED_OBJECT_KEYS = new Set(["__proto__", "constructor", "prototype"]);
+const STRICT_REDACT_KEYS = new Set([
+  "const",
+  "default",
+  "description",
+  "enum",
+  "example",
+  "examples",
+  "title",
+]);
 const SECRET_VALUE_KEY =
   /^(?:authorization|cookie|credential|oauth|passphrase|private[_-]?key|secret|seed|session[_-]?key|token|api[_-]?key|default|example|examples|enum|const)$/i;
 const SECRET_LIKE_VALUE =
@@ -33,7 +42,7 @@ const SIGN_TEXT =
 const BROADCAST_TEXT =
   /\b(?:broadcast|submit|send|dispatch|relay|publish)\b(?:[\s\S]{0,48}\b(?:transaction|order|trade|swap|payment|transfer)\b)?/i;
 const DIRECT_WRITE_TEXT =
-  /\b(?:swap|trade|transfer|payment|pay|purchase|buy|sell|withdraw|deposit|bridge|lend|borrow|stake|unstake|mint|burn|place order|cancel order|open position|close position|liquidate|execute transaction)\b/i;
+  /\b(?:create|update|set|modify|change|enable|disable|swap|trade|transfer|payment|pay|purchase|buy|sell|withdraw|deposit|bridge|lend|borrow|stake|unstake|mint|burn|place order|cancel order|open position|close position|liquidate|execute transaction)\b/i;
 const EXPLICIT_EXECUTION_TEXT =
   /\b(?:execute|perform|initiate|place order|cancel order|open position|close position|liquidate)\b/i;
 const DESTRUCTIVE_TEXT =
@@ -49,6 +58,8 @@ const DIRECT_WRITE_SCHEMA_FIELD =
   /(?:broadcast|submit|execute|sendtransaction|placetrade|placeorder|swap|transfer|delete|destroy|revoke|signandbroadcast)$/;
 const SENSITIVE_SCHEMA_FIELD =
   /(?:privatekey|secretkey|sessionkey|passphrase|seedphrase|mnemonic|credential|authorization|oauth|apikey)$/;
+const SENSITIVE_OUTPUT_SCHEMA_FIELD =
+  /(?:privatekeys?|secretkeys?|sessionkeys?|passphrases?|seedphrases?|mnemonics?|credentials?|authorizations?|oauth|apikeys?|accesstokens?|refreshtokens?|tokens?|secrets?|cardnumbers?|accountnumbers?|securitycodes?|cvv|cvc|pan|rawsecret)$/;
 
 /**
  * Parse an offline capture of an MCP tools/list response.
@@ -85,7 +96,7 @@ export function parseCapturedToolsList(capture) {
     if (names.has(comparisonName)) {
       throw discoveryError(
         "DUPLICATE_TOOL_NAME",
-        `Captured tools/list data contains a duplicate tool name: ${normalized.name}.`,
+        `Captured tools/list data contains a duplicate tool name at index ${index}.`,
       );
     }
     names.add(comparisonName);
@@ -106,6 +117,7 @@ export function classifyPayboxTool(tool) {
   const nameText = humanize(name);
   const descriptionText = humanize(description);
   const schemaSignals = inspectInputSchema(normalized.inputSchema);
+  const outputSignals = inspectOutputSchema(normalized.outputSchema);
 
   const readName = READ_NAME.test(name);
   const readDescription = READ_TEXT.test(descriptionText);
@@ -156,6 +168,9 @@ export function classifyPayboxTool(tool) {
   if (classification === "unknown") riskFlags.push("UNKNOWN_CAPABILITY");
   if (schemaSignals.mutating) riskFlags.push("MUTATING_INPUT_SCHEMA");
   if (schemaSignals.sensitive) riskFlags.push("SENSITIVE_SIGNING_INPUT");
+  if (!normalized.inputSchemaPresent) riskFlags.push("INPUT_SCHEMA_UNBOUND");
+  if (outputSignals.sensitive) riskFlags.push("SENSITIVE_OUTPUT_SCHEMA");
+  if (outputSignals.unbound) riskFlags.push("OUTPUT_SCHEMA_UNBOUND");
   if (readName && classification !== "read") riskFlags.push("DECEPTIVE_READ_NAME");
 
   const readOnlyHint = normalized.annotations?.readOnlyHint;
@@ -166,10 +181,10 @@ export function classifyPayboxTool(tool) {
   if (normalized.annotations?.destructiveHint === true) {
     riskFlags.push("PROVIDER_DESTRUCTIVE_HINT");
   }
+  riskFlags.push("REMOTE_TOOL_CALL_UNREVIEWED");
 
   const uniqueRiskFlags = [...new Set(riskFlags)].sort();
-  const safeReadOnlyCandidate =
-    classification === "read" && uniqueRiskFlags.length === 0;
+  const safeReadOnlyCandidate = false;
   const writeCapable = ["sign", "broadcast", "combined_write"].includes(
     classification,
   );
@@ -190,16 +205,99 @@ export function classifyPayboxTool(tool) {
  * Timestamps and live claims are deliberately excluded so the same capture
  * produces the same digest.
  */
-export function buildPayboxToolSnapshot(capture) {
+export function buildPayboxToolSnapshot(
+  capture,
+  {
+    providerAuthenticated = false,
+    resource = null,
+    protocolVersion = null,
+    observedAt = null,
+    sensitiveValues = [],
+  } = {},
+) {
+  if (typeof providerAuthenticated !== "boolean") {
+    throw discoveryError(
+      "SNAPSHOT_SOURCE_INVALID",
+      "Provider authentication state must be a boolean.",
+    );
+  }
+  if (providerAuthenticated) {
+    if (
+      resource !== "https://api.paybox.sh/mcp" ||
+      protocolVersion !== "2025-06-18"
+    ) {
+      throw discoveryError(
+        "SNAPSHOT_SOURCE_INVALID",
+        "Authenticated snapshots require the pinned PayBox resource and protocol.",
+      );
+    }
+  } else if (resource !== null || protocolVersion !== null) {
+    throw discoveryError(
+      "SNAPSHOT_SOURCE_INVALID",
+      "Unauthenticated snapshots cannot claim a provider resource or protocol.",
+    );
+  }
+  if (
+    observedAt !== null &&
+    (typeof observedAt !== "string" ||
+      !Number.isFinite(Date.parse(observedAt)) ||
+      new Date(observedAt).toISOString() !== observedAt)
+  ) {
+    throw discoveryError(
+      "SNAPSHOT_SOURCE_INVALID",
+      "Snapshot observation time must be a canonical ISO timestamp.",
+    );
+  }
+  if (!providerAuthenticated && observedAt !== null) {
+    throw discoveryError(
+      "SNAPSHOT_SOURCE_INVALID",
+      "Offline snapshots cannot claim a live observation time.",
+    );
+  }
+  if (
+    !Array.isArray(sensitiveValues) ||
+    sensitiveValues.some(
+      (value) => typeof value !== "string" || value.length < 1,
+    ) ||
+    (!providerAuthenticated && sensitiveValues.length > 0)
+  ) {
+    throw discoveryError(
+      "SNAPSHOT_SOURCE_INVALID",
+      "Sensitive provider values are accepted only for authenticated snapshots.",
+    );
+  }
   const tools = parseCapturedToolsList(capture)
     .map((tool) => {
+      if (containsSensitiveMaterial(tool, sensitiveValues)) {
+        throw discoveryError(
+          "PAYBOX_PROVIDER_CONTENT_UNSAFE",
+          "PayBox returned session material in its authenticated tools catalog.",
+        );
+      }
       const assessment = classifyPayboxTool(tool);
-      const redactedSchema = redactSnapshotValue(tool.inputSchema);
+      const redactedSchema = redactSnapshotValue(tool.inputSchema, {
+        sensitiveValues,
+        strict: providerAuthenticated,
+      });
+      const redactedOutputSchema =
+        tool.outputSchema === null
+          ? null
+          : redactSnapshotValue(tool.outputSchema, {
+              sensitiveValues,
+              strict: providerAuthenticated,
+            });
       return {
         name: tool.name,
-        description: redactSnapshotValue(tool.description),
+        description: providerAuthenticated
+          ? "[REDACTED:PROVIDER_TEXT]"
+          : redactSnapshotValue(tool.description, { sensitiveValues }),
         input_schema: redactedSchema,
+        input_schema_present: tool.inputSchemaPresent,
         input_schema_digest: digest(tool.inputSchema),
+        output_schema: redactedOutputSchema,
+        output_schema_present: tool.outputSchema !== null,
+        output_schema_digest:
+          tool.outputSchema === null ? null : digest(tool.outputSchema),
         provider_read_only_hint:
           typeof tool.annotations?.readOnlyHint === "boolean"
             ? tool.annotations.readOnlyHint
@@ -207,14 +305,20 @@ export function buildPayboxToolSnapshot(capture) {
         ...assessment,
       };
     })
-    .sort((left, right) => left.name.localeCompare(right.name));
+    .sort((left, right) =>
+      left.name < right.name ? -1 : left.name > right.name ? 1 : 0,
+    );
 
   const material = {
     schema_version: SNAPSHOT_SCHEMA,
     source: {
-      kind: "captured_mcp_tools_list",
-      offline_analysis: true,
-      provider_authenticated: false,
+      kind: providerAuthenticated
+        ? "authenticated_mcp_tools_list"
+        : "captured_mcp_tools_list",
+      offline_analysis: !providerAuthenticated,
+      provider_authenticated: providerAuthenticated,
+      resource,
+      protocol_version: protocolVersion,
     },
     tool_count: tools.length,
     risk_summary: {
@@ -235,6 +339,7 @@ export function buildPayboxToolSnapshot(capture) {
 
   return {
     ...material,
+    observed_at: observedAt,
     snapshot_digest: digest(material),
   };
 }
@@ -357,15 +462,16 @@ function normalizeTool(tool, index) {
   ) {
     throw discoveryError(
       "TOOL_DESCRIPTION_INVALID",
-      `Tool ${tool.name} has an invalid description.`,
+      `Tool at index ${index} has an invalid description.`,
     );
   }
   if ("inputSchema" in tool && "input_schema" in tool) {
     throw discoveryError(
       "TOOL_SCHEMA_AMBIGUOUS",
-      `Tool ${tool.name} contains both inputSchema and input_schema.`,
+      `Tool at index ${index} contains both inputSchema and input_schema.`,
     );
   }
+  const inputSchemaPresent = "inputSchema" in tool || "input_schema" in tool;
   const inputSchema = tool.inputSchema ?? tool.input_schema ?? {
     type: "object",
     properties: {},
@@ -373,14 +479,27 @@ function normalizeTool(tool, index) {
   if (!isPlainObject(inputSchema)) {
     throw discoveryError(
       "TOOL_SCHEMA_INVALID",
-      `Tool ${tool.name} input schema must be an object.`,
+      `Tool at index ${index} input schema must be an object.`,
+    );
+  }
+  if ("outputSchema" in tool && "output_schema" in tool) {
+    throw discoveryError(
+      "TOOL_SCHEMA_AMBIGUOUS",
+      `Tool at index ${index} contains both outputSchema and output_schema.`,
+    );
+  }
+  const outputSchema = tool.outputSchema ?? tool.output_schema ?? null;
+  if (outputSchema !== null && !isPlainObject(outputSchema)) {
+    throw discoveryError(
+      "TOOL_SCHEMA_INVALID",
+      `Tool at index ${index} output schema must be an object.`,
     );
   }
   const annotations = tool.annotations;
   if (annotations !== undefined && !isPlainObject(annotations)) {
     throw discoveryError(
       "TOOL_ANNOTATIONS_INVALID",
-      `Tool ${tool.name} annotations must be an object.`,
+      `Tool at index ${index} annotations must be an object.`,
     );
   }
   if (
@@ -389,7 +508,7 @@ function normalizeTool(tool, index) {
   ) {
     throw discoveryError(
       "TOOL_ANNOTATIONS_INVALID",
-      `Tool ${tool.name} readOnlyHint must be a boolean.`,
+      `Tool at index ${index} readOnlyHint must be a boolean.`,
     );
   }
   for (const hint of [
@@ -403,7 +522,7 @@ function normalizeTool(tool, index) {
     ) {
       throw discoveryError(
         "TOOL_ANNOTATIONS_INVALID",
-        `Tool ${tool.name} ${hint} must be a boolean.`,
+        `Tool at index ${index} has an invalid ${hint}.`,
       );
     }
   }
@@ -411,6 +530,8 @@ function normalizeTool(tool, index) {
     name: tool.name,
     description,
     inputSchema,
+    inputSchemaPresent,
+    outputSchema,
     annotations,
   };
 }
@@ -435,6 +556,43 @@ function inspectInputSchema(schema) {
     ),
     sensitive: normalized.some((field) => SENSITIVE_SCHEMA_FIELD.test(field)),
   };
+}
+
+function inspectOutputSchema(schema) {
+  if (schema === null) return { sensitive: false, unbound: true };
+  const fields = [];
+  collectSchemaFields(schema, [], fields);
+  const normalized = fields.map(normalizeIdentifier);
+  return {
+    sensitive: normalized.some((field) =>
+      SENSITIVE_OUTPUT_SCHEMA_FIELD.test(field),
+    ),
+    unbound: !isExplicitClosedObjectSchema(schema),
+  };
+}
+
+function isExplicitClosedObjectSchema(schema) {
+  if (
+    !isPlainObject(schema) ||
+    schema.type !== "object" ||
+    schema.additionalProperties !== false ||
+    !isPlainObject(schema.properties)
+  ) {
+    return false;
+  }
+  return ![
+    "$ref",
+    "allOf",
+    "anyOf",
+    "dependentSchemas",
+    "else",
+    "if",
+    "not",
+    "oneOf",
+    "patternProperties",
+    "then",
+    "unevaluatedProperties",
+  ].some((keyword) => Object.hasOwn(schema, keyword));
 }
 
 function collectSchemaFields(value, path, output) {
@@ -474,32 +632,73 @@ function collectSchemaSignalValues(value, output) {
   }
 }
 
-function redactSnapshotValue(value, { key = "", propertyMap = false } = {}) {
+function redactSnapshotValue(
+  value,
+  {
+    propertyMap = false,
+    sensitiveValues = [],
+    strict = false,
+  } = {},
+) {
   if (value === null || typeof value === "boolean" || typeof value === "number") {
     return value;
   }
   if (typeof value === "string") {
+    if (containsSensitiveValue(value, sensitiveValues)) {
+      return "[REDACTED:SESSION-MATERIAL]";
+    }
     if (SECRET_LIKE_VALUE.test(value)) return "[REDACTED:SECRET-LIKE]";
     return value;
   }
   if (Array.isArray(value)) {
-    return value.map((entry) => redactSnapshotValue(entry));
+    return value.map((entry) =>
+      redactSnapshotValue(entry, { sensitiveValues, strict }),
+    );
   }
   if (!isPlainObject(value)) return "[REDACTED:UNSUPPORTED]";
 
   const next = {};
   for (const [entryKey, entry] of Object.entries(value)) {
     const isPropertyDefinition = propertyMap;
-    if (!isPropertyDefinition && SECRET_VALUE_KEY.test(entryKey)) {
-      next[entryKey] = "[REDACTED:VALUE]";
+    const outputKey = containsSensitiveValue(entryKey, sensitiveValues)
+      ? `[REDACTED:KEY-${digest(entryKey).slice(0, 12)}]`
+      : entryKey;
+    if (
+      (!isPropertyDefinition && SECRET_VALUE_KEY.test(entryKey)) ||
+      (strict && STRICT_REDACT_KEYS.has(entryKey))
+    ) {
+      next[outputKey] = "[REDACTED:VALUE]";
       continue;
     }
-    next[entryKey] = redactSnapshotValue(entry, {
-      key: entryKey,
+    next[outputKey] = redactSnapshotValue(entry, {
       propertyMap: entryKey === "properties",
+      sensitiveValues,
+      strict,
     });
   }
   return next;
+}
+
+function containsSensitiveValue(value, sensitiveValues) {
+  return sensitiveValues.some((sensitive) => value.includes(sensitive));
+}
+
+function containsSensitiveMaterial(value, sensitiveValues) {
+  if (sensitiveValues.length === 0) return false;
+  if (typeof value === "string") {
+    return containsSensitiveValue(value, sensitiveValues);
+  }
+  if (Array.isArray(value)) {
+    return value.some((entry) =>
+      containsSensitiveMaterial(entry, sensitiveValues),
+    );
+  }
+  if (!isPlainObject(value)) return false;
+  return Object.entries(value).some(
+    ([key, entry]) =>
+      containsSensitiveValue(key, sensitiveValues) ||
+      containsSensitiveMaterial(entry, sensitiveValues),
+  );
 }
 
 function humanize(value) {

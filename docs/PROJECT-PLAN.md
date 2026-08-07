@@ -1,18 +1,21 @@
 # Project Plan
 
-Status: card-first v0.4.0 released; live partner integration gated
+Status: v0.5.0 connection/discovery candidate; financial execution remains gated
 
 ## Product decision
 
 Build Protected PayBox as a downloadable BYOA plugin/MCP with no frontend.
 Prioritize card purchases over swaps because they expose the largest gap between
-PayBox's announced Phase 2 merchant/amount grant design and a human's full
-purchase mandate. Use DoorDash as the reference journey and a small set of
+PayBox's documented merchant-origin/amount one-time-card request and a human's
+full purchase mandate. Use DoorDash as the reference journey and a small set of
 representative commerce archetypes to prove the taxonomy is reusable.
 
-Do not wait for PayBox card access to demonstrate the policy surface. Do not
-claim enforcement or merchant coverage until the provider exposes an
-authenticated, mandatory pre-credential hook and lifecycle events.
+Let the user connect through session-only OAuth and discover their authenticated
+tool catalog and enabled-plugin configuration, but do not call any remote PayBox
+tool. Do not claim financial-resource access or
+capability from public documentation alone. Do not claim enforcement or
+merchant coverage until PayBox exposes a mandatory Delta check at credential
+release/signing plus the evidence and lifecycle facts needed to prove it.
 
 ## Target user
 
@@ -41,6 +44,15 @@ fee, wrong destination, subscription, recurring flag, or changed checkout.
 
 ### Functional
 
+- Connect a PayBox account with OAuth authorization code, dynamic public-client
+  registration, PKCE S256, exact loopback callback, and `mcp` scope only.
+- Run authenticated upstream MCP `initialize` and paginated `tools/list`.
+- Return a redacted tool summary and deterministic input/output schema digests without
+  exposing tokens, codes, session IDs, descriptions, or schemas to the model.
+- Keep the token in memory and expose explicit local disconnect; provide clear
+  PayBox Clients manual-revocation guidance for every named registration.
+- Structurally omit every upstream `tools/call`, REST, SDK, and CLI execution
+  path.
 - Compile a closed card-purchase intent to a canonical policy and digest.
 - Display every constraint and model a matching confirmation digest; do not
   claim authenticated human authorization.
@@ -51,8 +63,10 @@ fee, wrong destination, subscription, recurring flag, or changed checkout.
 - Persist one-use fixture history and reject a second successful nonce.
 - Produce a self-consistency record with explicit proof limitations.
 - Ship one plugin containing the skill and MCP; preserve the swap fixture.
-- Keep all credential, provider, network, signature, and fund movement paths
-  locked.
+- Keep all credential/balance/request-history reads, credential claims, payment
+  requests, signing, swaps, x402, provider mutation, and fund-movement paths
+  locked. `tools/list` alone reads the account-specific catalog and enabled
+  plugin configuration.
 
 ### Evidence
 
@@ -66,7 +80,8 @@ fee, wrong destination, subscription, recurring flag, or changed checkout.
 - Missing, low-confidence, stale, conflicting, malformed, or tampered evidence
   cannot `PASS`.
 - No PAN, CVV, OAuth token, wallet key, raw address, or provider secret enters
-  plans, fixtures, logs, receipts, or MCP arguments.
+  plans, fixtures, logs, receipts, model-facing results, or MCP arguments. The
+  connection module's own access token remains transient internal state.
 
 ### Distribution
 
@@ -79,9 +94,11 @@ fee, wrong destination, subscription, recurring flag, or changed checkout.
 - Personal GitHub repository with independently implemented adapters only; no
   proprietary Repyh source or evaluation binaries are vendored.
 
-## Non-goals for the card-core release
+## Non-goals for the current release
 
-- PayBox OAuth or authenticated tool discovery.
+- Calling `list_credentials`, `request_payment`,
+  `claim_payment_credentials`, `get_request`, `request_swap`, or any other
+  upstream PayBox tool.
 - Live card tokenization, credential issuance, merchant checkout, network
   authorization, capture, refund, or dispute.
 - Live DoorDash or other merchant coverage.
@@ -89,6 +106,8 @@ fee, wrong destination, subscription, recurring flag, or changed checkout.
 - Arbitrary natural-language rules outside the published taxonomy.
 - General arbitrary-asset swaps.
 - Ecommerce UI or browser automation.
+- Persistent PayBox login, `offline_access`, refresh tokens, API keys, or
+  signing keys.
 
 ## Team loop
 
@@ -122,7 +141,8 @@ Goal: determine what can truthfully be built without partner access.
 
 PM deliverables:
 
-- separate PayBox Phase 2 card claims from the live MoonAgents Card product;
+- reconcile the current PayBox developer contract with conflicting older Help
+  Center Phase 2 wording and keep MoonAgents Card separate;
 - define “merchant coverage” as rail + ordering + evidence + mandatory hook +
   lifecycle reconciliation;
 - choose DoorDash as the reference journey; and
@@ -137,8 +157,9 @@ Engineering deliverables:
   idempotency, reconciliation, taxonomy, and fail-closed patterns; and
 - identify the scalar evidence bridge and licensing constraints.
 
-Exit gate: no live PayBox/card/merchant claim in scope; exact partner seam and
-evidence authority model documented.
+Exit gate: public PayBox contracts are distinguished from authenticated account
+availability and executed merchant evidence; the exact partner seam and
+evidence-authority model are documented.
 
 ## Sprint 1 — card core
 
@@ -206,7 +227,76 @@ Expected focus:
 
 The sprint log records actual findings and fixes.
 
-## Sprint 2 — authenticated evidence pack
+## Sprint 2 — session-only account connection and contract discovery
+
+Goal: let the evaluator connect their PayBox account and establish the exact
+authenticated tool surface without creating any financial execution path.
+
+PM/Design:
+
+- explain that the user signs in, selects grants, and approves only on PayBox;
+- explain that the uniquely named client is already registered before consent,
+  the `mcp` bearer has the full authority of selected grants, and every attempt
+  may leave a client requiring manual revocation;
+- recommend no credential if PayBox permits; otherwise one least-sensitive
+  non-secret evaluation credential, human approval for every operation, and no
+  raw-secret grant;
+- distinguish the account-specific catalog/enabled-plugin read from a tool call,
+  financial-resource read, or “Delta protected” action; and
+- explain both local disconnect and server-side client revocation.
+
+Engineering:
+
+- validate the OAuth challenge and pinned authorization/resource metadata;
+- dynamically register a public client with an exact `127.0.0.1` callback;
+- implement authorization code with PKCE S256 and state;
+- request only `mcp`, reject refresh/identity tokens or scope escalation, and
+  store the access token only in memory;
+- implement upstream MCP `initialize`, `notifications/initialized`, and bounded
+  paginated `tools/list` for protocol `2025-06-18`;
+- classify tool/schema risk conservatively and return a redacted deterministic
+  summary with `observed_at` outside its digest; keep every discovered tool
+  unreviewed and mandate-gated with no safe-read classification; and
+- provide explicit disconnect/session cleanup with PayBox revocation guidance.
+
+QA:
+
+- metadata, registration, callback, state, PKCE, timeout, denial, token expiry,
+  scope-escalation, and token-redaction cases;
+- MCP JSON/SSE, request-ID matching, session headers, pagination, repeated
+  cursor, size limits, 401/403, and disconnect cases;
+- proof that local MCP discovery results contain no descriptions, schemas,
+  token, code, client ID, or MCP session ID; and
+- proof that no upstream `tools/call`, financial-resource read, or financial
+  adapter is exposed.
+
+Exit gate: mocked tests and a deliberately non-financial live smoke test show
+that account authorization, authenticated tool discovery, redacted output,
+local token destruction, and manual PayBox Clients revocation of every reported
+client name all behave as documented.
+The live smoke test must not call any discovered PayBox tool.
+
+## Mini-sprint 2 — connection security review
+
+PayBox-owner questions:
+
+- Is dynamic registration/consent presented honestly as an account-side effect?
+- Does the user understand the grant still exists after local disconnect?
+- Is the discovery summary sufficient to plan an adapter while disclosing only
+  the account-specific catalog/configuration and no credential, balance, card,
+  or request-history data?
+- Does any code path proxy or invoke a discovered tool?
+
+CTO questions:
+
+- Can tokens, authorization codes, PKCE verifiers, or MCP session IDs reach
+  model context or disk? Is the authorization URL limited to the active flow?
+- Do metadata drift, callback mismatch, scope escalation, oversized responses,
+  pagination loops, expiry, and process restart fail closed?
+- Is the upstream `tools/call` omission structural and regression-tested?
+- Is OAuth connectivity clearly separated from Delta enforcement?
+
+## Sprint 3 — authenticated evidence pack
 
 Goal: replace hand-built product semantics with reviewed source artifacts while
 remaining offline from PayBox execution.
@@ -228,7 +318,7 @@ Release gate: 100% exact critical-field behavior on the committed corpus;
 unrecognized or ambiguous input always becomes `REVIEW`. This release still
 does not claim live merchant coverage.
 
-## Mini-sprint 2 — extraction and lifecycle review
+## Mini-sprint 3 — extraction and lifecycle review
 
 PayBox-owner questions:
 
@@ -244,19 +334,27 @@ CTO questions:
 - Are missing fields and upstream failures fail-closed?
 - Are unknown authorizations reconciled without duplicate release?
 
-## Sprint 3 — PayBox partner adapter
+## Sprint 4 — PayBox partner adapter
 
-Start only after authenticated PayBox schema and sandbox access.
+Start only after account discovery confirms the relevant tools and PayBox
+provides a sandbox plus a mandatory Delta integration point.
 
 Scope:
 
-- authenticate without exposing OAuth material to model context;
-- stage or inspect the exact credential request;
+- reuse the isolated OAuth connection without exposing token material to model
+  context;
+- map the documented `request_payment` fields and account-discovered schema to
+  the canonical proposal;
 - persist a canonical action and provider idempotency key;
 - submit signed intent/evidence through pinned Delta components;
 - independently verify the Delta proof;
 - atomically consume a one-use release decision;
-- call the exclusive PayBox credential-release hook;
+- submit `request_payment` only through the protected path, poll the original
+  `request_id`, and permit one-time `claim_payment_credentials` only after a
+  fresh exact-bound Delta `PASS`;
+- route usable card authority from both an immediate autonomous
+  `request_payment` success and `claim_payment_credentials` directly to an
+  isolated credential broker or merchant executor, never through model context;
 - reconcile credential, authorization, capture, reversal, and refund events;
   and
 - test at least DoorDash plus one retail archetype end to end.
@@ -265,18 +363,18 @@ Exit gate: the agent has no alternate credentialed mutation path, every
 credential is bound to a fresh Delta decision, and ambiguous outcomes never
 trigger blind retry.
 
-## Sprint 4 — generalized swaps
+## Sprint 5 — generalized swaps
 
 Start after the card partner seam is validated or a separate swap priority is
 approved.
 
 Scope:
 
-- authenticated PayBox/Swaps.xyz tool discovery;
+- account-confirmed `request_swap` schema and enabled chain/tool discovery;
 - canonical asset IDs, chains, decimals, and token-program metadata;
 - exact-in and exact-out quote/build fixtures for supported assets;
 - live quote, chain, simulation, and unsigned-transaction evidence;
-- mandatory Delta check before signing/broadcast; and
+- mandatory PayBox-side Delta check before signing/broadcast; and
 - token, chain, slippage, fee, price-impact, recipient, program, and transaction
   message binding.
 
@@ -286,6 +384,8 @@ Do not infer arbitrary asset support from the current fixed USDC-to-SOL fixture.
 
 Demo quality:
 
+- a user can authorize a uniquely named PayBox client, see a redacted authenticated
+  tool inventory, disconnect, and explain that no remote tool was called;
 - a new user can install and see meaningful `BLOCK`, corrected `PASS`, and
   evidence `REVIEW` in three commands;
 - the user can explain that no card or order was touched; and
@@ -295,14 +395,17 @@ Engineering quality:
 
 - stable scenario reason codes;
 - no floating-point money;
-- no secret material in source, fixtures, logs, records, artifacts, or tool
-  arguments;
+- no secret material in source, fixtures, logs, records, model-facing output,
+  saved discovery snapshots, or tool arguments; transient OAuth state remains
+  memory-only;
+- no upstream `tools/call` or financial-resource-read adapter;
 - exact replay convergence and second-use block;
 - deterministic builds and green cold install; and
 - no unsupported production claim.
 
 Partner-readiness quality:
 
+- an authenticated, redacted account tool snapshot;
 - a concrete hook request/response contract;
 - a five-layer merchant capability matrix;
 - a reviewed evidence corpus; and
@@ -312,19 +415,31 @@ Partner-readiness quality:
 
 | Risk | Mitigation |
 | --- | --- |
-| PayBox card timing or schema changes | Treat public docs as research, use adapter boundary, require authenticated discovery |
+| Public docs differ from account/deployment tools | Treat docs as a baseline; use authenticated discovery and sandbox contract tests |
+| OAuth grant is broader than discovery code needs | State that the `mcp` bearer has the full authority of selected grants; choose no credential if allowed, otherwise one least-sensitive non-secret evaluation credential with human approval for every operation and no raw secrets |
+| Dynamic registration accumulates clients | Track every attempted client name and direct the user to revoke every one manually in PayBox Clients |
+| Local disconnect is mistaken for server revocation | Explicitly direct the user to PayBox Clients and verify manual revocation during smoke testing |
+| Token leaks from local process | Memory-only mcp token, no refresh, redacted outputs, bounded lifetime, isolated module |
 | Card acceptance mistaken for merchant coverage | Report five independent capability layers |
 | Extractor hallucinates or misprices | Restrict it to semantics; authenticated financial facts; fail to `REVIEW` |
 | Skill bypass | Exclusive PayBox credential-release hook; no raw mutation alternative |
 | Duplicate credential or charge | Durable one-use lease, provider idempotency, journal before release, reconciliation |
 | Chat confirmation spoofing | Explicit current limitation; production identity/signature requirement |
 | Checksum overclaimed as proof | Label unkeyed self-consistency only; require real verified Delta proof later |
-| Private-source licensing | Keep repo private; clean adapters; record internal authorization before reuse/distribution |
+| Private-source licensing | Vendor no restricted source; use clean adapters; record internal authorization before reuse or distribution |
 
 ## Current stopping point
 
-The first useful stopping point is a verified card-core release: one-download
-plugin/skill, full DoorDash decision matrix, representative merchant-neutral
-fixtures, explicit evidence authority boundary, locked execution, independent
-synthetic stakeholder reviews, and a reproducible release artifact. Live
-PayBox/card work is intentionally deferred until partner access exists.
+The current candidate combines the verified card-core experience with
+session-only PayBox OAuth and authenticated contract discovery. It is ready to
+advance only after the connection security suite, deterministic cold package,
+and a consent/discovery/disconnect/revoke live smoke test pass without invoking
+any discovered tool.
+
+That stopping point proves account connection and adapter planning, not Delta
+enforcement. Credential, balance, card, and request-history reads plus all
+remote tool calls remain disabled; `tools/list` reads only the account-specific
+catalog and enabled-plugin configuration. Card
+execution still requires a mandatory PayBox-side Delta boundary, source-bound
+checkout evidence, one-use credential-claim semantics, merchant lifecycle
+evidence, and an end-to-end sandbox transaction.

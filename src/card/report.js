@@ -50,7 +50,7 @@ export function formatCardDecision(record, { details = false } = {}) {
   }
   lines.push(
     `Boundary: ${record.boundary.statement}`,
-    "PayBox card status: public Help Center documentation says card support is Phase 2; no authenticated card tool schema was observed.",
+    "PayBox card status: developer docs describe request_payment, but this fixture used no authenticated account schema or provider authorization.",
     `Receipt: ${verifyRecord(record).verified ? "local checksum self-consistent; not signed" : "checksum verification failed"}.`,
   );
   if (details) {

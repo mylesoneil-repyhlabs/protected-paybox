@@ -1,5 +1,5 @@
 export const PRODUCT_NAME = "Protected PayBox";
-export const VERSION = "0.4.0";
+export const VERSION = "0.5.0";
 
 export const SCHEMAS = Object.freeze({
   INTENT: "protected-paybox.intent.v1",
@@ -53,6 +53,9 @@ export const SOLANA_PROFILE = Object.freeze({
 export const PUBLIC_BOUNDARY = Object.freeze({
   paybox_oauth_used: false,
   paybox_contacted: false,
+  paybox_oauth_available: true,
+  authenticated_tool_discovery_available: true,
+  remote_paybox_tool_calls_available: false,
   private_delta_used: false,
   signature_requested: false,
   transaction_broadcast: false,
@@ -61,7 +64,7 @@ export const PUBLIC_BOUNDARY = Object.freeze({
   payment_credential_requested: false,
   card_authorization_requested: false,
   statement:
-    "LOCAL FIXTURE ONLY · NO PAYBOX CONTACT · NO CREDENTIAL OR AUTHORIZATION · NO SIGNATURE OR BROADCAST · NO ORDER · NO MONEY MOVED",
+    "FIXTURE EVALUATION ONLY · OPTIONAL PAYBOX OAUTH IS DISCOVERY-ONLY · NO PAYBOX TOOL CALL · NO CREDENTIAL OR AUTHORIZATION · NO SIGNATURE OR BROADCAST · NO ORDER · NO MONEY MOVED",
 });
 
 export const DEFAULT_FRESHNESS = Object.freeze({

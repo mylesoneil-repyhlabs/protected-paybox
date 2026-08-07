@@ -1,6 +1,6 @@
 # Sprint Log
 
-Current target: card-core release
+Current target: v0.5.0 session-only PayBox connection and authenticated discovery
 
 ## Discovery sprint
 
@@ -10,8 +10,9 @@ Current target: card-core release
 - Defined DoorDash as the high-information reference journey.
 - Defined merchant coverage as payment rail, ordering path, authenticated
   evidence, mandatory enforcement hook, and lifecycle events.
-- Separated PayBox's publicly documented Phase 2 card plan from MoonAgents Card.
-- Set the current claim to partner-evaluation simulation.
+- Reconciled PayBox's current developer card contract with conflicting older
+  Help Center Phase 2 wording and kept MoonAgents Card separate.
+- Set the current financial-action claim to partner-evaluation simulation.
 
 ### Engineering lead
 
@@ -32,8 +33,13 @@ Current target: card-core release
 
 ### Product evidence
 
-- Public PayBox Help Center: payment cards are Phase 2/future release.
-- Authenticated PayBox MCP card schema: not observed.
+- Current PayBox developer reference: `request_payment` and one-time
+  `claim_payment_credentials` are documented; merchant-origin binding names
+  Basis Theory and currency is currently USD.
+- Older PayBox Help Center: payment cards are described as Phase 2/future. This
+  conflicts with the developer reference and is retained only as a source
+  discrepancy.
+- Authenticated pilot-account tool surface: not yet committed or verified.
 - DoorDash/PayBox transaction: not observed.
 - Live card integration claim: prohibited.
 
@@ -48,7 +54,8 @@ Complete. Product boundary and partner dependencies are explicit.
 - Card is the default first-run surface.
 - DoorDash meaningful near miss comes before corrected `PASS`.
 - Six merchant profiles are labeled fixtures, never coverage.
-- Every decision states no PayBox/card/order/network contact.
+- Every fixture decision states that the evaluation made no
+  PayBox/card/order/network call. A separate discovery session may exist.
 - Custom plans model a matching caller-supplied digest; canned fixtures are
   explicitly auto-bound with no user authorization.
 
@@ -115,7 +122,88 @@ updated. The targeted installer/card/MCP suite then passed 26/26.
   annotated tag, release assets, checksum, and fresh re-download verification:
   passed for v0.4.0 at merge commit `eede8c8`.
 
-## Mini-sprint
+## Account-connection sprint
+
+### PM and design implemented
+
+- The user authorizes only on PayBox; Protected PayBox never asks them to paste
+  a password, passkey, token, card, API key, or signing key.
+- Consent guidance says the client has already been registered, the `mcp` bearer
+  has the full authority of every selected grant, and the user should select no
+  credential if allowed; otherwise one least-sensitive non-secret evaluation
+  credential with human approval for every operation and no raw secrets.
+- Connection copy says exactly what is contacted and repeats that no PayBox
+  financial tool can be called.
+- Local disconnect is distinguished from manual server-side client revocation
+  in PayBox Clients. Every attempt may leave its named registered client.
+- Tool discovery is presented as an account-specific catalog and enabled-plugin
+  configuration read, not a credential/balance/history read, transaction,
+  merchant coverage, or Delta protection.
+
+### Engineering implemented
+
+- Pinned PayBox OAuth protected-resource and authorization-server discovery.
+- Dynamic public-client registration with no client secret.
+- Authorization code with PKCE S256, random state, and an exact ephemeral
+  `127.0.0.1` callback.
+- `mcp`-only authorization with memory-only access token; refresh token,
+  identity token, confidential-client material, and returned scope escalation
+  fail closed.
+- Upstream streamable HTTP MCP `initialize`, `notifications/initialized`, and
+  bounded paginated `tools/list` using protocol `2025-06-18`.
+- Strict JSON/SSE media types, exact JSON-RPC ID matching, stable session-header
+  handling, 401/403 distinction, streaming response limits, cursor-loop
+  defense, and cleanup for replaced or failed upstream sessions.
+- Monotonic connection generations and fail-fast connect/sync guards prevent a
+  late token exchange or stale discovery result from surviving timeout,
+  disconnect, or reconnect.
+- Deterministic provider-authenticated tool snapshot with conservative
+  read/prepare/sign/broadcast/combined-write/unknown classification.
+- Model-facing summary limited to stable aliases, provider-name digests,
+  classification, risk flags, input/output schema digests, and aggregate
+  counts. No raw names, descriptions, full schemas, tokens, codes, client IDs,
+  or MCP session IDs are returned. Name/schema digests are not confidential or
+  dictionary-resistant. `observed_at` is outside the deterministic snapshot
+  digest. Every discovered tool is unreviewed and mandate-gated; none is a safe
+  read.
+- No upstream `tools/call`, REST, SDK/CLI, credential/balance/request-history,
+  payment, signing, swap, x402, or plugin-execution implementation.
+
+### QA coverage added
+
+- OAuth metadata, registration, URL construction, code exchange, PKCE/state,
+  exact callback, timeout/denial, scope escalation, expiry, and redaction.
+- Upstream MCP initialization, pagination, JSON/SSE, repeated cursor, page
+  limit, protocol mismatch, authentication/permission failures, and cleanup.
+- Connection lifecycle, process-only status, output minimization, and local MCP
+  proof that no generic remote-call tool exists.
+- Concurrent begin, timeout-during-exchange, disconnect-during-sync,
+  reconnect-during-old-sync, repeated-sync cleanup, prompt-injection tool names,
+  output-schema gaps, strict content types, session drift, and streaming
+  oversize cancellation.
+
+### Candidate verification status
+
+Implementation and documentation are present in the v0.5.0 working tree. The
+current full local suite passes 199/199 tests. Packaging, deterministic archive,
+cold-install, and live PayBox
+consent/discovery/disconnect/revoke gates must be recorded before publishing the
+release. The live gate is non-financial and must not invoke any discovered
+PayBox tool.
+
+## Connection mini-sprint
+
+Security and product reviewers must treat these as release blockers:
+
+- any OAuth/token/session value reaching a model-facing result or saved file;
+- any persistent refresh/API/signing credential;
+- any upstream `tools/call` or financial-resource-read route;
+- copy that calls OAuth connectivity Delta enforcement;
+- copy that treats a documented tool as enabled for this account without
+  authenticated discovery; or
+- copy that equates local disconnect with server-side revocation.
+
+## Card-core release record
 
 Status: v0.4.0 published and independently re-downloaded; live integration
 dependencies remain gated.
@@ -132,6 +220,12 @@ reviewer identifies an unresolved product-truth or security blocker.
 - Provider event simulator and reconciliation state machine.
 - Five-layer merchant capability matrix.
 - PayBox hook conformance server.
+- Live discovery snapshot for the uniquely named evaluation client, stored only if
+  it passes the redaction/content scan.
+- Mandatory `request_payment` / one-time-claim Delta hook design based on the
+  account-confirmed schema.
 
-Authenticated PayBox card integration and generalized swaps remain gated on
-partner schemas and access.
+Financial resource reads, authenticated PayBox card execution, credential
+claiming, and generalized swaps remain gated on an enforceable partner path,
+authenticated evidence, and sandbox access. Public schemas and OAuth alone are
+insufficient.

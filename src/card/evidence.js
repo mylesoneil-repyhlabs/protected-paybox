@@ -32,11 +32,13 @@ const TOP_LEVEL_KEYS = [
 
 export const PAYBOX_CARD_CONTRACT_PLACEHOLDER = Object.freeze({
   provider: "paybox",
-  card_support_status: "PUBLIC_DOCUMENTATION_PHASE_2",
-  tool_name: "unobserved.paybox.card.request_credential",
+  card_support_status:
+    "PUBLIC_DEVELOPER_CONTRACT_DOCUMENTED_ACCOUNT_AVAILABILITY_UNVERIFIED",
+  tool_name: "request_payment",
   authenticated_schema_observed: false,
   contract_digest: digest({
-    note: "No authenticated PayBox card tool contract was available for v0.4.0.",
+    note:
+      "PayBox documents request_payment, but no authenticated account tool schema or provider authorization was used for this fixture.",
   }),
 });
 
@@ -175,7 +177,7 @@ function validateProviderContract(value) {
   if (digest(value) !== digest(PAYBOX_CARD_CONTRACT_PLACEHOLDER)) {
     throw new GuardError(
       "PAYBOX_CARD_CONTRACT_UNVERIFIED",
-      "The fixture must retain the exact unobserved PayBox Phase 2 contract placeholder.",
+      "The fixture must retain the exact public-docs-only PayBox contract placeholder.",
     );
   }
 }

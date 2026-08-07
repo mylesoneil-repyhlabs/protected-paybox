@@ -172,13 +172,21 @@ for required_file in \
   "skills/protected-paybox/SKILL.md" \
   "src/card/evaluator.js" \
   "src/cli.js" \
+  "src/http-body.js" \
   "src/integration/production-composition.js" \
   "src/integration/paybox-hook-contract.js" \
   "src/mcp-server.js" \
+  "src/paybox-connection.js" \
+  "src/paybox-mcp-client.js" \
+  "src/paybox-oauth.js" \
   "test/card.test.js" \
+  "test/http-body.test.js" \
   "test/install.test.js" \
   "test/mcp-server.test.js" \
+  "test/paybox-connection.test.js" \
   "test/paybox-hook-contract.test.js" \
+  "test/paybox-mcp-client.test.js" \
+  "test/paybox-oauth.test.js" \
   "test/release-content-scan.test.js"; do
   if ! grep -Fqx "$ARCHIVE_PREFIX$required_file" "$ARCHIVE_LIST"; then
     echo "Release archive is missing required file: $required_file" >&2

@@ -1,23 +1,37 @@
 # Protected PayBox
 
-Protected PayBox is a card-first partner-evaluation demo for applying a Delta
-mandate before an agent receives a payment credential. It ships as one local
-Codex plugin with a bundled skill and dependency-free MCP server. DoorDash is
-the reference journey; Amazon, Uber, Instacart, Walmart, and Target are
-representative fixture profiles.
+Protected PayBox combines authenticated PayBox capability discovery with a
+separate card-first Delta-mandate simulation. It does not yet put Delta in the
+live PayBox credential path. It ships as one local Codex plugin with a bundled
+skill and dependency-free MCP server.
+DoorDash is the reference journey; Amazon, Uber, Instacart, Walmart, and Target
+are representative fixture profiles.
 
-The current build is credential-free and simulation-only. It cannot contact
-PayBox, a merchant, an issuer, a card network, or Delta's private services. It
-cannot request a payment credential, authorize a card, place an order, sign or
-broadcast a transaction, or move funds.
+The current build can connect to a PayBox account through OAuth 2.1 in the
+user's browser and fetch authenticated `initialize` and `tools/list` responses.
+That discovery reads the account-specific tool catalog and enabled-plugin
+configuration exposed to the authorized client; it does not read credentials,
+balances, request history, card details, or other financial resources.
+The access token is held only in memory for that local process. The connector
+requests only `mcp`, not `offline_access`; it stores no access token, refresh
+token, authorization code, PKCE verifier, PayBox password, passkey, card data,
+or signing key.
 
-Representative fixtures are not merchant coverage. Public PayBox documentation
-currently describes payment-card support as Phase 2, and no authenticated card
-tool schema, provider, supported-merchant list, or pre-authorization hook has
-been observed. The separate MoonAgents Card product is a crypto-funded virtual
-Mastercard debit card; it is not evidence that PayBox card tokenization is live.
+Authenticated connection does not enable execution. The remote client has no
+`tools/call` implementation, so it cannot list account credentials, request or
+claim a payment card, reveal a secret, sign, swap, place an order, or move
+funds. Fixture evaluation remains local and uses no production Delta service.
 
-This release is a desktop/local partner-evaluation plugin. It is not a hosted
+PayBox's current developer documentation describes Basis Theory card
+tokenization plus `request_payment` and `claim_payment_credentials`. The first
+authorizes a merchant-and-amount-scoped one-time card; it does not submit the
+merchant checkout. Those tools remain deliberately unreachable here. Public
+developer docs and the older MoonPay Help Center disagree on card rollout, so
+actual availability and grants must be established from the authenticated
+account surface, not marketing copy.
+
+Representative fixtures are not merchant coverage. This release is a
+desktop/local partner-evaluation plugin. It is not a hosted
 ChatGPT or Claude mobile connector and does not reproduce PayBox's mobile
 experience.
 
@@ -66,8 +80,31 @@ enforcement.
 
 ## Quick start
 
-Requires Node.js 22 or newer. No package installation or credentials are
-required.
+Requires Node.js 22 or newer. No package installation is required.
+
+Connect a PayBox account for one session and capture a private authenticated
+tool snapshot:
+
+```bash
+./run paybox-connect \
+  --out /absolute/private/paybox-tools.json
+```
+
+The flow has already registered the uniquely labeled client printed by the
+command. Open its PayBox URL in a browser on the same computer and approve only
+in PayBox. The `mcp` bearer carries the full authority of every credential grant
+you select even though this implementation calls only `initialize` and
+`tools/list`. Select no credential if PayBox permits; otherwise select one
+least-sensitive non-secret evaluation credential and require human approval
+for every operation. Never grant a raw secret for this test. The command
+performs authenticated capability discovery, closes the MCP session, and
+discards the in-memory token before printing its final result. Every connect
+attempt may leave its named registered client in PayBox, including an incomplete
+or failed attempt. Revoke every name reported by the command separately in
+PayBox's Clients screen when finished; its OAuth metadata does not advertise a
+revocation endpoint.
+
+No PayBox account is required for the local fixture demos:
 
 ```bash
 ./run card-demo --merchant doordash --scenario block-total
@@ -123,15 +160,21 @@ The installer creates a private, versioned managed copy and links only the
 skill. It records file digests, refuses unsafe path or symlink layouts, and
 continues to work after the downloaded source is removed.
 
-Local permissions: network access is absent; secret-shaped fields are rejected;
-the harness reads only files explicitly supplied to commands; plan/record writes
-are local and owner-only; and custom MCP evaluations retain private one-use
-history. A source-checksummed release does not authenticate its publisher.
+Local permissions: network access is used only after an explicit PayBox connect
+or authenticated sync action; secret-shaped tool arguments are rejected; OAuth
+tokens are memory-only; the harness reads only files explicitly supplied to
+commands; plan/record writes are local and owner-only; and custom MCP
+evaluations retain private one-use history. A source-checksummed release does
+not authenticate its publisher.
 
-The MCP exposes six simulation tools. Five are read-only; card evaluation writes
-private one-use history and is marked stateful:
+The MCP exposes ten tools. Four manage session-only PayBox connection and
+authenticated discovery; six operate the local fixture harness:
 
 - `protected_paybox_capabilities`
+- `protected_paybox_connect`
+- `protected_paybox_connection_status`
+- `protected_paybox_sync_tools`
+- `protected_paybox_disconnect`
 - `protected_paybox_card_plan`
 - `protected_paybox_card_demo`
 - `protected_paybox_card_evaluate`
@@ -140,7 +183,20 @@ private one-use history and is marked stateful:
 
 It supports MCP `2026-07-28` stateless discovery and the retained legacy
 initialize flow. It rejects raw PAN, CVV, private-key, seed, OAuth-token, and
-client-secret shaped fields before evaluation.
+client-secret shaped fields before evaluation. Authenticated PayBox discovery
+uses PayBox's documented streamable HTTP protocol `2025-06-18`. Remote tool
+descriptions, schemas, and tool names are treated as untrusted: MCP callers
+receive stable aliases, name digests, conservative classifications, risk flags,
+and input/output schema digests. Raw names and structurally redacted schemas
+appear only in an explicitly requested owner-only snapshot file; authenticated
+provider descriptions are replaced with a redaction marker even there. Aliases
+are derived from the name digest rather than provider ordering. Name and schema
+digests reduce direct
+prompt-injection exposure, but they are not confidential or dictionary-resistant
+representations of a small known tool vocabulary. `observed_at` records when the
+catalog was seen and is deliberately outside the deterministic snapshot digest.
+Every discovered tool remains unreviewed and mandate-gated; none is treated as a
+safe read, regardless of its name, classification, or schemas.
 
 ## Evidence contract
 
@@ -164,8 +220,10 @@ snapshot.
 
 ## What real enforcement requires
 
-A skill or BYOA MCP can guide the agent, but the agent can bypass it if raw
-PayBox mutation tools remain available. Bypass resistance requires a mandatory Delta check inside PayBox's credential-release boundary:
+A skill or BYOA MCP can guide the agent, but the agent can bypass it if the raw
+PayBox connector remains available. This release avoids that problem by
+exposing no PayBox mutations at all. Bypass-resistant execution still requires
+a mandatory Delta check inside PayBox's credential-release boundary:
 
 1. A merchant/evidence component supplies the basket semantics and an
    authenticated checkout digest to the protected gate.
@@ -204,8 +262,11 @@ or broadcast.
 
 ## Roadmap
 
-### Current release: card core
+### Current release: account connection and card core
 
+- session-only PayBox OAuth 2.1 with PKCE S256 and exact issuer/resource pins;
+- authenticated, bounded, redacted `tools/list` discovery;
+- no refresh token, token persistence, generic remote call, or financial tool;
 - card purchase is the default demo;
 - DoorDash has a full decision matrix;
 - five additional representative commerce-archetype fixtures prove
@@ -215,22 +276,47 @@ or broadcast.
 - local MCP plus installable skill/plugin; and
 - execution remains locked.
 
-### Next engineering release: authenticated evidence adapter
+### Next engineering release: reviewed adapters and authenticated evidence
 
+- review the owner-only authenticated snapshot and pin approved name, input,
+  and output-schema digests;
+- build only explicit, mandate-gated adapters after human review of each exact
+  input/output contract; no discovered tool is auto-enabled as a safe read;
 - a generalized-extractor adapter for product semantics;
 - raw-artifact golden corpus and adversarial extraction tests;
 - merchant/provider provenance and field-level source digests;
 - lifecycle state and authorization/capture/refund reconciliation; and
 - a PayBox hook conformance server and event simulator.
 
-### Partner release
+### Protected payment engineering candidate — partner hook required
 
-- authenticated PayBox card schema and sandbox;
+- production Delta signatures and policy evaluation using pinned authorized
+  Repyh dependencies;
+- a merchant checkout adapter that supplies authenticated basket and amount
+  evidence;
+- a partner-confirmed exclusive protected `request_payment` path bound to the exact merchant
+  HTTPS origin, integer USD cents, currency, checkout digest, and one-use Delta
+  decision;
+- route both usable card authority returned immediately by an autonomous
+  `request_payment` and later `claim_payment_credentials` output directly to an
+  isolated credential broker or merchant executor, never through model context;
+  and
+- submit once, then reconcile with `get_request`; never re-call a write tool to
+  finish a pending operation.
+
+### PayBox partner release
+
+- a PayBox sandbox and verified merchant/region/card eligibility;
 - mandatory pre-credential Delta hook with no alternate mutation path;
 - real signed Delta proof using pinned released Repyh dependencies;
 - provider idempotency and uncertain-result reconciliation; and
 - negotiated hook latency plus authenticated human/passkey fallback; and
 - verified merchant/region coverage based on end-to-end transactions.
+
+Current primary references: [PayBox OAuth](https://docs.paybox.sh/connect/oauth),
+[MCP connector](https://docs.paybox.sh/connect/mcp),
+[MCP tools](https://docs.paybox.sh/reference/mcp-tools), and
+[request lifecycle](https://docs.paybox.sh/concepts/requests).
 
 ## Verification
 

@@ -68,6 +68,9 @@ const REQUIRED_MANAGED_FILES = Object.freeze([
   "scripts/scan-release-content.mjs",
   "src/cli.js",
   "src/mcp-server.js",
+  "src/paybox-connection.js",
+  "src/paybox-mcp-client.js",
+  "src/paybox-oauth.js",
   "src/constants.js",
   "src/integration/paybox-hook-contract.js",
   "src/integration/production-composition.js",
@@ -439,7 +442,7 @@ function runDoctor(managedRoot, nodeBinary, expectedVersion) {
     result?.paybox_contacted !== false ||
     result?.network_contacted !== false
   ) {
-    fail("managed copy doctor did not confirm the simulation-only boundary.");
+    fail("managed copy doctor did not confirm the protected connection boundary.");
   }
 }
 
@@ -631,9 +634,9 @@ function installRelease(
   process.stdout.write([
     `${action} Protected PayBox at ${target}`,
     `Managed copy: ${managedRoot}`,
-    "Mode: credential-free simulation only.",
-    "No PayBox contact, credential use, signature, broadcast, or transaction execution.",
-    "Start a new chat and ask: Use $protected-paybox to show the DoorDash card BLOCK, PASS, and REVIEW story.",
+    "Mode: session-only PayBox OAuth discovery plus local mandate fixtures.",
+    "Remote PayBox calls, credential use, signatures, payments, swaps, broadcasts, and transaction execution remain disabled.",
+    "Start a new chat and ask: Use $protected-paybox to connect my PayBox account safely and audit its authenticated tool surface.",
     "",
   ].join("\n"));
 }

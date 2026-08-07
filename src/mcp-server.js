@@ -19,6 +19,7 @@ import {
 } from "./card/fixtures.js";
 import { createCardPlan, formatCardMandate } from "./card/policy.js";
 import { rejectSensitiveInput } from "./sensitive-input.js";
+import { PayboxConnection } from "./paybox-connection.js";
 
 const MODERN_PROTOCOL = "2026-07-28";
 const LEGACY_PROTOCOLS = new Set(["2025-11-25", "2025-06-18"]);
@@ -39,6 +40,7 @@ const SWAP_SCENARIOS = [
   "review-hidden-inner-call",
   "review-simulation-failed",
 ];
+const payboxConnection = new PayboxConnection();
 
 const TOOLS = Object.freeze([
   {
@@ -48,6 +50,53 @@ const TOOLS = Object.freeze([
       "List the exact simulated card and swap surface. Never claims live PayBox or merchant coverage.",
     inputSchema: closedObject({}),
     annotations: toolAnnotations({ readOnly: true, idempotent: true }),
+  },
+  {
+    name: "protected_paybox_connect",
+    title: "Connect a PayBox account",
+    description:
+      "Start a session-only PayBox OAuth flow. The user signs in and grants access only on PayBox; no credential is entered into this MCP. Financial tool calls remain disabled.",
+    inputSchema: closedObject({
+      timeout_seconds: {
+        type: "integer",
+        minimum: 60,
+        maximum: 600,
+        default: 300,
+      },
+    }),
+    annotations: toolAnnotations({
+      readOnly: false,
+      idempotent: false,
+      openWorld: true,
+    }),
+  },
+  {
+    name: "protected_paybox_connection_status",
+    title: "Check PayBox connection",
+    description:
+      "Report session-only PayBox OAuth state without returning tokens, authorization codes, session identifiers, or credential data.",
+    inputSchema: closedObject({}),
+    annotations: toolAnnotations({ readOnly: true, idempotent: true }),
+  },
+  {
+    name: "protected_paybox_sync_tools",
+    title: "Discover authenticated PayBox tools",
+    description:
+      "Fetch PayBox initialize and tools/list using the in-memory OAuth session, then return only stable aliases, name digests, classifications, risk flags, and input/output schema digests. It cannot call any remote tool.",
+    inputSchema: closedObject({}),
+    annotations: toolAnnotations({
+      readOnly: true,
+      idempotent: true,
+      openWorld: true,
+    }),
+  },
+  {
+    name: "protected_paybox_disconnect",
+    title: "Disconnect the local PayBox session",
+    description:
+      "Destroy the in-memory PayBox token and close the local MCP session. Server-side client revocation remains a separate PayBox action.",
+    inputSchema: closedObject({}),
+    annotations: toolAnnotations({ readOnly: false, idempotent: true }),
   },
   {
     name: "protected_paybox_card_plan",
@@ -217,10 +266,43 @@ async function callTool(name, args) {
         card_merchants: listRepresentativeMerchants(),
         card_scenarios: CARD_DEMO_SCENARIOS,
         swap_surface: "one fixed Solana USDC-to-SOL exact-input fixture",
+        account_connection:
+          "session-only OAuth plus authenticated tools/list discovery",
+        remote_tool_calls: "structurally unavailable",
         execution: "locked",
-        paybox_card_contract: "unobserved; public documentation says Phase 2",
+        paybox_card_contract:
+          "public docs describe request_payment and claim_payment_credentials; account exposure remains unverified until authenticated discovery",
         receipt: "unkeyed local SHA-256 self-consistency checksum",
       };
+      break;
+    case "protected_paybox_connect": {
+      assertKeys(args, ["timeout_seconds"], true);
+      const timeoutSeconds = args.timeout_seconds ?? 300;
+      if (
+        !Number.isInteger(timeoutSeconds) ||
+        timeoutSeconds < 60 ||
+        timeoutSeconds > 600
+      ) {
+        throw new Error("timeout_seconds must be an integer from 60 through 600.");
+      }
+      value = await payboxConnection.begin({
+        timeoutMs: timeoutSeconds * 1_000,
+      });
+      break;
+    }
+    case "protected_paybox_connection_status":
+      assertKeys(args, []);
+      value = await payboxConnection.status();
+      break;
+    case "protected_paybox_sync_tools": {
+      assertKeys(args, []);
+      const result = await payboxConnection.syncTools();
+      value = result.summary;
+      break;
+    }
+    case "protected_paybox_disconnect":
+      assertKeys(args, []);
+      value = await payboxConnection.disconnect();
       break;
     case "protected_paybox_card_plan":
       assertKeys(args, ["intent"]);
@@ -354,7 +436,7 @@ function summarizeToolResult(name, value) {
 }
 
 function serverInstructions() {
-  return "Simulation-only partner-evaluation MCP. Start with the card demo. Never request PayBox/card credentials, never imply merchant coverage, and never describe a local checksum as a Delta proof.";
+  return "Card-first partner-evaluation MCP. It may connect to PayBox through session-only browser OAuth and discover authenticated tool schemas, but it cannot call any remote PayBox tool or move money. Never request PayBox/card credentials, never imply merchant coverage, and never describe a local checksum as a Delta proof.";
 }
 
 function isModern(request) {
@@ -391,12 +473,12 @@ function closedObject(properties, required = []) {
   };
 }
 
-function toolAnnotations({ readOnly, idempotent }) {
+function toolAnnotations({ readOnly, idempotent, openWorld = false }) {
   return {
     readOnlyHint: readOnly,
     destructiveHint: false,
     idempotentHint: idempotent,
-    openWorldHint: false,
+    openWorldHint: openWorld,
   };
 }
 
