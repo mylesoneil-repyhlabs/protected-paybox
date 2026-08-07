@@ -1,7 +1,7 @@
 {
   "name": "protected-paybox",
-  "version": "0.4.0",
-  "description": "Card-first mandate evaluation and on-chain swap simulation for PayBox partner evaluation.",
+  "version": "0.5.0",
+  "description": "Session-only PayBox OAuth discovery plus card-first mandate evaluation and swap simulation.",
   "private": true,
   "type": "module",
   "engines": {

@@ -1,4 +1,4 @@
 interface:
   display_name: "Protected PayBox"
-  short_description: "Mandate-protected card purchase simulations"
-  default_prompt: "Use $protected-paybox to show a blocked DoorDash fixture, then the corrected pass."
+  short_description: "Connect PayBox and test mandate fixtures"
+  default_prompt: "Use $protected-paybox to connect my PayBox account for discovery-only access and audit its authenticated tool surface without calling any PayBox tool."

@@ -36,6 +36,10 @@ import {
   validateCardPlan,
 } from "./card/policy.js";
 import { buildPayboxToolSnapshot } from "./paybox-discovery.js";
+import {
+  PayboxConnection,
+  summarizePayboxSnapshot,
+} from "./paybox-connection.js";
 import { assertExecutionLocked, runPreflight } from "./preflight.js";
 import { formatDecision, renderHtml } from "./report.js";
 import { verifyRecord } from "./receipt.js";
@@ -85,6 +89,9 @@ async function main() {
     case "inspect-tools":
       await inspectToolsCommand(options);
       return;
+    case "paybox-connect":
+      await payboxConnectCommand(options);
+      return;
     case "execute":
     case "sign":
     case "broadcast":
@@ -110,6 +117,11 @@ async function doctor(options) {
     node_supported: major >= 22,
     schemas: SCHEMAS,
     execution_locked: PUBLIC_BOUNDARY.execution_available === false,
+    paybox_oauth_available: PUBLIC_BOUNDARY.paybox_oauth_available === true,
+    authenticated_tool_discovery_available:
+      PUBLIC_BOUNDARY.authenticated_tool_discovery_available === true,
+    remote_paybox_tool_calls_available:
+      PUBLIC_BOUNDARY.remote_paybox_tool_calls_available === true,
     paybox_contacted: false,
     network_contacted: false,
     ready: major >= 22,
@@ -117,9 +129,10 @@ async function doctor(options) {
   print(options.json ? result : [
     `${PRODUCT_NAME} v${VERSION}`,
     `Node ${result.node}: ${result.node_supported ? "ready" : "unsupported"}`,
-    "Mode: credential-free simulated fixtures (card first; swap preserved)",
-    "Execution: locked; no execution adapter",
-    "PayBox/network contact: none",
+    "Mode: session-only PayBox OAuth discovery plus local fixtures",
+    "Remote PayBox tools: locked; authenticated tools/list only after explicit connect",
+    "Execution: locked; no payment, signing, swap, or broadcast adapter",
+    "PayBox/network contact during doctor: none",
   ].join("\n"));
 }
 
@@ -416,6 +429,101 @@ async function inspectToolsCommand(options) {
   ].filter(Boolean).join("\n"));
 }
 
+async function payboxConnectCommand(options) {
+  noUnknownOptions(options, ["timeout", "out", "json"]);
+  const timeoutSeconds = options.timeout === undefined
+    ? 300
+    : Number(options.timeout);
+  if (
+    !Number.isInteger(timeoutSeconds) ||
+    timeoutSeconds < 60 ||
+    timeoutSeconds > 600
+  ) {
+    throw new GuardError(
+      "OPTION_INVALID",
+      "--timeout must be an integer from 60 through 600 seconds.",
+    );
+  }
+  let requestedSnapshotPath = null;
+  if (options.out !== undefined) {
+    if (typeof options.out !== "string" || !path.isAbsolute(options.out)) {
+      throw new GuardError(
+        "ABSOLUTE_PATH_REQUIRED",
+        "Authenticated tool snapshot path must be absolute.",
+      );
+    }
+    requestedSnapshotPath = path.resolve(options.out);
+  }
+  const connection = new PayboxConnection();
+  let revocationReported = false;
+  try {
+    const started = await connection.begin({
+      timeoutMs: timeoutSeconds * 1_000,
+    });
+    process.stderr.write([
+      "PAYBOX SESSION-ONLY AUTHORIZATION",
+      "Open this URL in your browser and approve only on PayBox:",
+      started.authorization_url,
+      "",
+      `Registered PayBox client: ${started.registered_client_name}`,
+      "This client is already registered. Its mcp bearer has the authority of every selected grant.",
+      "Select no credential if PayBox permits; otherwise select one least-sensitive evaluation credential, require human approval for every operation, and grant no raw secrets.",
+      "Protected PayBox will only fetch initialize and tools/list. It cannot call a PayBox financial tool.",
+      "",
+    ].join("\n"));
+    const authorized = await connection.waitForAuthorization();
+    if (authorized.phase !== "connected") {
+      throw new GuardError(
+        authorized.reason_code ?? "PAYBOX_OAUTH_FAILED",
+        authorized.message ?? "PayBox authorization was not completed.",
+      );
+    }
+    const discovered = await connection.syncTools();
+    let snapshotPath = null;
+    if (requestedSnapshotPath) {
+      snapshotPath = requestedSnapshotPath;
+      await writePrivateJson(snapshotPath, discovered.snapshot);
+    }
+    const disconnected = await connection.disconnect();
+    revocationReported = true;
+    const result = {
+      authenticated_discovery_completed: true,
+      final_connection_state: "disconnected",
+      connection_lifetime: "one command; token discarded before this result",
+      scope: "mcp",
+      snapshot_path: snapshotPath,
+      snapshot: summarizePayboxSnapshot(discovered.snapshot),
+      local_token_discarded: disconnected.local_token_discarded,
+      registered_client_names_requiring_manual_revocation:
+        disconnected.registered_client_names_requiring_manual_revocation,
+      server_side_client_revoked: false,
+      manual_revocation_next_step: disconnected.next_step,
+      remote_tool_calls_available: false,
+      money_moved: false,
+    };
+    print(options.json ? result : [
+      "PAYBOX AUTHENTICATED CAPABILITY DISCOVERY COMPLETE",
+      `Tools discovered: ${result.snapshot.tool_count}`,
+      `Snapshot digest: ${result.snapshot.snapshot_digest}`,
+      snapshotPath ? `Private snapshot: ${snapshotPath}` : null,
+      "Final connection: disconnected; the memory-only token was discarded",
+      `Server-side client: still registered; ${disconnected.next_step}`,
+      "Remote PayBox tool calls: disabled",
+      "No credential requested · no signature · no payment · no swap · no money moved",
+    ].filter(Boolean).join("\n"));
+  } finally {
+    const disconnected = await connection.disconnect();
+    if (
+      !revocationReported &&
+      disconnected.registered_client_names_requiring_manual_revocation.length > 0
+    ) {
+      process.stderr.write(
+        `PAYBOX MANUAL REVOCATION REQUIRED: ${disconnected.next_step}\n`,
+      );
+    }
+  }
+}
+
 async function persistRecord(record, output) {
   if (!output) return null;
   const directory = path.resolve(output);
@@ -550,6 +658,7 @@ Usage:
   ./run card-simulate --plan /absolute/card-plan.json --evidence /absolute/card-evidence.json --confirm-policy <digest> --nonce <one-use-nonce>
   ./run verify --record /absolute/record.json
   ./run inspect-tools --capture /absolute/tools-list.json [--out /private/snapshot.json]
+  ./run paybox-connect [--timeout 300] [--out /absolute/private/paybox-tools.json]
 
-Public execution is locked. The commands execute, sign, and broadcast always fail closed.`;
+PayBox connection is session-only OAuth plus authenticated tool discovery. Public execution is locked; execute, sign, broadcast, and every upstream PayBox tool call fail closed.`;
 }

@@ -1,7 +1,7 @@
 {
   "name": "protected-paybox",
-  "version": "0.4.0",
-  "description": "Card-first Delta mandate partner-evaluation fixtures for PayBox, with a preserved on-chain swap demo.",
+  "version": "0.5.0",
+  "description": "Session-only PayBox OAuth discovery with card-first Delta mandate fixtures and a preserved swap demo.",
   "author": {
     "name": "Myles O'Neil",
     "url": "https://github.com/mylesoneil-repyhlabs"
@@ -13,13 +13,14 @@
   "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "Protected PayBox",
-    "shortDescription": "Simulate mandate-protected card purchases",
-    "longDescription": "Run credential-free card-purchase and on-chain swap fixtures that demonstrate exact mandate evaluation before a future PayBox credential-release hook.",
+    "shortDescription": "Discover PayBox tools and test mandates",
+    "longDescription": "Connect a PayBox account through session-only browser OAuth, capture its authenticated tool surface without calling it, and run card-purchase or swap mandate fixtures.",
     "developerName": "Myles O'Neil",
     "category": "Developer Tools",
-    "capabilities": ["Local MCP", "Simulation", "PASS/BLOCK/REVIEW"],
+    "capabilities": ["Local MCP", "OAuth Discovery", "Simulation", "PASS/BLOCK/REVIEW"],
     "websiteURL": "https://github.com/mylesoneil-repyhlabs/protected-paybox",
     "defaultPrompt": [
+      "Connect my PayBox account for discovery-only authenticated tool inspection without calling any PayBox tool.",
       "Show a blocked DoorDash purchase, then the corrected pass.",
       "List the card-purchase mandate checks.",
       "Explain what PayBox must integrate for real enforcement."

@@ -52,7 +52,7 @@ The public fixture can `PASS` only when every closed local field matches. That
 
 A future generalized swap release needs:
 
-- authenticated PayBox/Swaps.xyz tool discovery;
+- account-confirmed PayBox `request_swap` schema and enabled chain/tool surface;
 - supported-chain and asset catalog with canonical addresses and decimals;
 - live quote evidence;
 - exact unsigned transaction build;
@@ -62,4 +62,7 @@ A future generalized swap release needs:
 - atomic one-use consumption and uncertain-result reconciliation; and
 - no raw signing or broadcast path available to the agent.
 
-Until then, describe this only as the fixed USDC-to-SOL local fixture.
+PayBox's public developer reference describes a generalized MoonX-backed swap
+request, but Protected PayBox only discovers that schema and cannot call it.
+Until an enforceable adapter satisfies the requirements above, describe this
+only as the fixed USDC-to-SOL local fixture.

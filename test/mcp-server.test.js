@@ -31,6 +31,10 @@ test("modern MCP discovery, deterministic tools, and card call work", async () =
   assert.deepEqual(names, [...names].sort((left, right) => {
     const order = [
       "protected_paybox_capabilities",
+      "protected_paybox_connect",
+      "protected_paybox_connection_status",
+      "protected_paybox_sync_tools",
+      "protected_paybox_disconnect",
       "protected_paybox_card_plan",
       "protected_paybox_card_demo",
       "protected_paybox_card_evaluate",
@@ -49,6 +53,25 @@ test("modern MCP discovery, deterministic tools, and card call work", async () =
   assert.match(
     responses[2].result.content[0].text,
     /NO CARD CREATED OR AUTHORIZED/,
+  );
+});
+
+test("MCP exposes session-only PayBox status but no generic remote call tool", async () => {
+  const responses = await exchange([
+    modernRequest("list", "tools/list", {}),
+    modernRequest("status", "tools/call", {
+      name: "protected_paybox_connection_status",
+      arguments: {},
+    }),
+  ]);
+  const names = responses[0].result.tools.map((tool) => tool.name);
+  assert.ok(names.includes("protected_paybox_connect"));
+  assert.ok(names.includes("protected_paybox_sync_tools"));
+  assert.equal(names.some((name) => /(?:remote_)?(?:call|execute)$/.test(name)), false);
+  assert.equal(responses[1].result.structuredContent.phase, "disconnected");
+  assert.equal(
+    responses[1].result.structuredContent.execution,
+    "disabled; no upstream tools/call implementation",
   );
 });
 

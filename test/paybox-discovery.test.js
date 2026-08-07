@@ -16,6 +16,10 @@ test("parses JSON-RPC tools/list captures and direct arrays", () => {
       type: "object",
       properties: { address: { type: "string" } },
     },
+    outputSchema: {
+      type: "object",
+      properties: { balance: { type: "string" } },
+    },
   };
 
   assert.equal(parseCapturedToolsList([tool]).length, 1);
@@ -153,6 +157,10 @@ test("builds a deterministic, sorted, redacted canonical snapshot", () => {
       name: "get_balance",
       description: "Retrieve a balance.",
       inputSchema: { type: "object", properties: {} },
+      outputSchema: {
+        type: "object",
+        properties: { balance: { type: "string" } },
+      },
     },
   ];
 
@@ -161,13 +169,103 @@ test("builds a deterministic, sorted, redacted canonical snapshot", () => {
 
   assert.deepEqual(first, second);
   assert.equal(first.tools[0].name, "get_balance");
-  assert.equal(first.tools[0].safe_read_only_candidate, true);
+  assert.equal(first.tools[0].safe_read_only_candidate, false);
+  assert.ok(
+    first.tools[0].risk_flags.includes("REMOTE_TOOL_CALL_UNREVIEWED"),
+  );
+  assert.equal(first.risk_summary.safe_read_only_candidates, 0);
+  assert.equal(first.risk_summary.mandate_gated_tools, first.tool_count);
+  assert.match(first.tools[0].output_schema_digest, /^[a-f0-9]{64}$/);
   assert.match(first.snapshot_digest, /^[a-f0-9]{64}$/);
   assert.equal(
     first.tools[1].input_schema.properties.api_key.default,
     "[REDACTED:VALUE]",
   );
   assert.doesNotMatch(canonicalizePayboxToolSnapshot(first), /sk_live_/);
+});
+
+test("missing, open, or sensitive output schemas can never be safe read candidates", () => {
+  const missing = classifyPayboxTool({
+    name: "get_balance",
+    description: "Read a balance.",
+    inputSchema: { type: "object", properties: {} },
+  });
+  assert.equal(missing.safe_read_only_candidate, false);
+  assert.ok(missing.risk_flags.includes("OUTPUT_SCHEMA_UNBOUND"));
+
+  const open = classifyPayboxTool({
+    name: "get_open_result",
+    description: "Read an open result.",
+    inputSchema: { type: "object", properties: {} },
+    outputSchema: {},
+  });
+  assert.equal(open.safe_read_only_candidate, false);
+  assert.ok(open.risk_flags.includes("REMOTE_TOOL_CALL_UNREVIEWED"));
+
+  for (const field of ["secret", "credentials", "card_number"]) {
+    const sensitive = classifyPayboxTool({
+      name: `list_${field}`,
+      description: "List provider values.",
+      inputSchema: { type: "object", properties: {} },
+      outputSchema: {
+        type: "object",
+        properties: { [field]: { type: "string" } },
+      },
+    });
+    assert.equal(sensitive.safe_read_only_candidate, false);
+    assert.ok(sensitive.risk_flags.includes("SENSITIVE_OUTPUT_SCHEMA"));
+    assert.ok(sensitive.risk_flags.includes("REMOTE_TOOL_CALL_UNREVIEWED"));
+  }
+});
+
+test("missing input schemas are unbound and every remote classification stays gated", () => {
+  const tools = [
+    {
+      name: "get_unbound",
+      description: "Read a value.",
+      outputSchema: {
+        type: "object",
+        properties: { value: { type: "string" } },
+      },
+    },
+    {
+      name: "get_bound",
+      description: "Read a value.",
+      inputSchema: { type: "object", properties: {} },
+      outputSchema: {
+        type: "object",
+        properties: { value: { type: "string" } },
+      },
+    },
+    {
+      name: "prepare_value",
+      description: "Prepare an action.",
+      inputSchema: { type: "object", properties: {} },
+      outputSchema: { type: "object", properties: {} },
+    },
+  ];
+
+  const results = tools.map((tool) => classifyPayboxTool(tool));
+  assert.ok(results[0].risk_flags.includes("INPUT_SCHEMA_UNBOUND"));
+  for (const result of results) {
+    assert.equal(result.safe_read_only_candidate, false);
+    assert.equal(result.requires_mandate_gate, true);
+    assert.ok(result.risk_flags.includes("REMOTE_TOOL_CALL_UNREVIEWED"));
+  }
+});
+
+test("snapshot sorting uses deterministic ASCII code-point order", () => {
+  const snapshot = buildPayboxToolSnapshot([
+    { name: "a-", inputSchema: {}, outputSchema: {} },
+    { name: "B", inputSchema: {}, outputSchema: {} },
+    { name: "a", inputSchema: {}, outputSchema: {} },
+    { name: "A_", inputSchema: {}, outputSchema: {} },
+  ]);
+
+  assert.deepEqual(
+    snapshot.tools.map((tool) => tool.name),
+    ["A_", "B", "a", "a-"],
+  );
 });
 
 test("destructive annotations and names can never be safe reads", () => {

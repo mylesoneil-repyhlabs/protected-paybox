@@ -149,6 +149,20 @@ test("relative input paths are rejected instead of silently resolved", async () 
   );
 });
 
+test("paybox-connect rejects an unsafe output path before any OAuth request", async () => {
+  await assert.rejects(
+    execFileAsync(process.execPath, [
+      cli,
+      "paybox-connect",
+      "--timeout",
+      "60",
+      "--out",
+      "relative-paybox-tools.json",
+    ]),
+    /Authenticated tool snapshot path must be absolute/,
+  );
+});
+
 test("caller cannot redirect the canonical one-use history store", async () => {
   await assert.rejects(
     execFileAsync(process.execPath, [

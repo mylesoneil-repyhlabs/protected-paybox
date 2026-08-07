@@ -104,8 +104,8 @@ test("fresh install creates a private managed copy and atomic skill link", async
     const harness = managedHarness(home);
     const target = installedSkill(home);
     assert.match(stdout, /Installed Protected PayBox/);
-    assert.match(stdout, /credential-free simulation only/i);
-    assert.match(stdout, /No PayBox contact.*signature.*broadcast.*execution/s);
+    assert.match(stdout, /session-only PayBox OAuth discovery/i);
+    assert.match(stdout, /Remote PayBox calls.*payments.*execution remain disabled/s);
     assert.equal(stderr, "");
     assert.equal(
       await realpath(target),
@@ -238,9 +238,9 @@ test("installed skill survives deletion of the downloaded release and runs docto
         timeout: 20_000,
       },
     );
-    assert.match(stdout, /Mode: credential-free simulated fixture/);
-    assert.match(stdout, /Execution: locked; no execution adapter/);
-    assert.match(stdout, /PayBox\/network contact: none/);
+    assert.match(stdout, /Mode: session-only PayBox OAuth discovery plus local fixtures/);
+    assert.match(stdout, /Execution: locked; no payment, signing, swap, or broadcast adapter/);
+    assert.match(stdout, /PayBox\/network contact during doctor: none/);
     assert.equal(stderr, "");
   } finally {
     await rm(temporaryRoot, { recursive: true, force: true });
