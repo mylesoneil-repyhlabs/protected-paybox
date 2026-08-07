@@ -1,296 +1,276 @@
 # Protected PayBox
 
-> Turn one PayBox-shaped on-chain swap into a closed mandate, evaluate one
-> exact proposal, and return `PASS`, `BLOCK`, or `REVIEW` before any signing
-> boundary.
-
-Protected PayBox is an independent Delta prototype. It is not a MoonPay or
-PayBox product, integration, or endorsement.
+Protected PayBox is a card-first partner-evaluation demo for applying a Delta
+mandate before an agent receives a payment credential. It ships as one local
+Codex plugin with a bundled skill and dependency-free MCP server. DoorDash is
+the reference journey; Amazon, Uber, Instacart, Walmart, and Target are
+representative fixture profiles.
 
 The current build is credential-free and simulation-only. It cannot contact
-PayBox, request a wallet signature, broadcast a transaction, or move funds.
+PayBox, a merchant, an issuer, a card network, or Delta's private services. It
+cannot request a payment credential, authorize a card, place an order, sign or
+broadcast a transaction, or move funds.
 
-## The first experience
+Representative fixtures are not merchant coverage. Public PayBox documentation
+currently describes payment-card support as Phase 2, and no authenticated card
+tool schema, provider, supported-merchant list, or pre-authorization hook has
+been observed. The separate MoonAgents Card product is a crypto-funded virtual
+Mastercard debit card; it is not evidence that PayBox card tokenization is live.
 
-The installable `$protected-paybox` skill starts with one deliberately narrow
-action:
+This release is a desktop/local partner-evaluation plugin. It is not a hosted
+ChatGPT or Claude mobile connector and does not reproduce PayBox's mobile
+experience.
 
-```text
-Use exactly 5 USDC on Solana Mainnet to buy SOL once.
-Receive at least 0.025 SOL, return it to the same wallet, stay below the
-slippage, price-impact and fee limits, and do not add an approval, bridge,
-transfer or other instruction.
-```
+## What the demo proves
 
-The Guard displays the complete mandate and pauses for a separate
-authorization message. It then evaluates a fully labeled transaction-shaped
-fixture:
+For a closed card-purchase mandate, the demo can:
 
-```text
-PROTECTED PAYBOX · SIMULATED FIXTURE · NO SIGNATURE · NO BROADCAST
+1. compile exact merchant, basket, price, fee, tip, destination, expiry, and
+   payment-envelope constraints into a canonical policy;
+2. model a caller-supplied confirmation digest for custom plans, while labeling
+   canned fixtures as auto-bound with no user authorization;
+3. evaluate an exact checkout snapshot and proposed one-time credential scope;
+4. return deterministic `PASS`, `BLOCK`, or `REVIEW` reason codes;
+5. bind the policy, checkout snapshot, proposal, evidence, decision, one-use
+   state, and public execution boundary in a local record; and
+6. reject a second successful use of a persisted mandate.
 
-BLOCK — The proposed minimum receive is below the user limit recomputed from
-the local reference fixture.
+It does not yet provide a production Delta proof. Its receipt uses an **Unkeyed SHA-256 self-consistency checksum**, useful for tamper detection in the demo
+but not publisher authentication, non-repudiation, or a guarantee.
 
-Boundary: SIMULATION ONLY · NO PAYBOX CONTACT · NO SIGNATURE · NO TRANSACTION
-Receipt: local checksum self-consistent; not signed.
-```
+## Card coverage
 
-The companion `PASS` proves only that the exact local fixture satisfied the
-closed local policy. It is not a production Delta proof or PayBox execution.
+The DoorDash fixture matrix exercises:
 
-## Supported surface
-
-| Dimension | Current build |
+| Decision | Examples |
 | --- | --- |
-| Action | One same-chain `onchain.swap.exact_in` |
-| Chain | Solana Mainnet |
-| Sell asset | Native Solana USDC mint |
-| Buy asset | SOL |
-| Size | Exact atomic amount |
-| Recipient | Same wallet only |
-| Builder | Swaps.xyz-shaped fixture |
-| Limits | Minimum receive, slippage, price impact, network fee, priority fee |
-| Message checks | Fee payer, signer set, programs, inner calls, lookup tables, exact bytes |
-| Decisions | `PASS`, `BLOCK`, `REVIEW` |
-| Evidence | Deterministic local fixtures |
-| PayBox OAuth/tools | Offline captured-schema classifier; no OAuth |
-| Install | Versioned private managed copy plus `$protected-paybox` skill |
-| Signature/broadcast | CLI locked; no execution adapter |
+| `PASS` | Exact merchant, basket, totals, destination, and one-time credential envelope satisfy the mandate |
+| `BLOCK` | Wrong platform or storefront, excessive total or tip, wrong/missing item, changed quantity, recurring flag, excessive credential expiry, changed address, or subscription |
+| `REVIEW` | Stale checkout, low-confidence or incomplete semantics, inconsistent arithmetic, or snapshot tampering |
 
-The Swaps.xyz profile is based on
-[MoonPay's public swap skill](https://github.com/moonpay/skills/blob/main/skills/moonpay-swap-tokens/SKILL.md),
-which says MoonPay CLI swaps are built through Swaps.xyz. It is not a claim
-that authenticated PayBox uses the same venue.
+The same merchant-neutral schema has a labeled happy-path fixture for six
+commerce archetypes:
 
-### Deliberately unsupported
+| Fixture | Archetype | Current status |
+| --- | --- | --- |
+| DoorDash | Meal delivery | Simulated fixture only |
+| Amazon | Marketplace retail | Simulated fixture only |
+| Uber | Mobility | Simulated fixture only |
+| Instacart | Grocery delivery | Simulated fixture only |
+| Walmart | Omnichannel retail | Simulated fixture only |
+| Target | Omnichannel retail | Simulated fixture only |
 
-- token approvals, delegation, permits, or additional signatures;
-- transfers, arbitrary recipients, bridges, or cross-chain actions;
-- exact-output, multi-action, scheduled, or recurring swaps;
-- prediction markets, lending, tokenized equities, perpetuals, or leverage;
-- x402 and ecommerce;
-- live PayBox credential release, signing, or broadcast.
+These names demonstrate taxonomy portability. They do not prove payment-rail
+acceptance, ordering access, authenticated evidence, PayBox support, or live
+enforcement.
 
-## Why the decision model matters
+## Quick start
 
-- `BLOCK` means complete, internally consistent evidence proves that the exact
-  proposal violates the mandate.
-- `REVIEW` means the Guard could not verify fresh, complete, decoded and
-  matching evidence.
-- `PASS` means the exact labeled fixture satisfies the local policy.
+Requires Node.js 22 or newer. No package installation or credentials are
+required.
 
-Missing or stale data never becomes a false policy violation. Unknown Solana
-programs, hidden inner calls, unresolved lookup tables, changed bytes and
-opaque tool schemas fail closed.
-
-## Install the skill
-
-Requirements: macOS or Linux and Node.js 22+.
-
-Download the verified
-[v0.3.0 release](https://github.com/mylesoneil-repyhlabs/protected-paybox/releases/tag/v0.3.0),
-including the
-[ZIP](https://github.com/mylesoneil-repyhlabs/protected-paybox/releases/download/v0.3.0/protected-paybox-v0.3.0.zip)
-and its
-[checksum file](https://github.com/mylesoneil-repyhlabs/protected-paybox/releases/download/v0.3.0/protected-paybox-v0.3.0.zip.sha256).
-The ZIP SHA-256 is:
-
-```text
-21437fbe79582cf2935dd9221684a8126e0a8e3fa48437a4e4e245d1915933a8
+```bash
+./run card-demo --merchant doordash --scenario block-total
+./run card-demo --merchant doordash --scenario pass
+./run card-demo --merchant doordash --scenario review-incomplete
 ```
 
-From the extracted release or a repository checkout:
+Optional diagnostics:
+
+```bash
+./run doctor
+./run card-merchants
+```
+
+Create a private custom mandate from the bundled example:
+
+```bash
+./run card-plan \
+  --intent /absolute/path/to/examples/card/doordash-intent.json \
+  --details
+```
+
+Show the resulting mandate in full. The intended host workflow asks for a
+separate confirmation message, then supplies the exact matching digest:
+
+```bash
+./run card-demo \
+  --plan /absolute/path/to/card-plan.json \
+  --confirm-policy <displayed-policy-digest> \
+  --scenario pass
+```
+
+The harness binds the supplied digest but cannot prove who authored the chat message.
+It models confirmation; it does not enforce human authorization or identity.
+
+## Plugin and skill
+
+The repository root is a Codex plugin:
+
+- `.codex-plugin/plugin.json` declares the plugin;
+- `.mcp.json` launches the bundled local MCP through the portable `./run`
+  launcher; and
+- `skills/protected-paybox/` supplies the operator workflow and claim boundary.
+
+Download and extract the release ZIP, then add the extracted directory as a
+local plugin. To install only the skill and managed harness:
 
 ```bash
 ./install
 ```
 
-The installer creates a private, versioned managed copy, records the exact
-SHA-256 digest of every allowlisted payload file, verifies the copy, and links
-the `$protected-paybox` skill to that copy. It rejects symlinks and unexpected
-payload paths. The installed skill keeps working after the extracted source is
-removed. Re-running the same version is idempotent; moving a verified older
-managed install to a newer version requires:
+The installer creates a private, versioned managed copy and links only the
+skill. It records file digests, refuses unsafe path or symlink layouts, and
+continues to work after the downloaded source is removed.
+
+Local permissions: network access is absent; secret-shaped fields are rejected;
+the harness reads only files explicitly supplied to commands; plan/record writes
+are local and owner-only; and custom MCP evaluations retain private one-use
+history. A source-checksummed release does not authenticate its publisher.
+
+The MCP exposes six simulation tools. Five are read-only; card evaluation writes
+private one-use history and is marked stateful:
+
+- `protected_paybox_capabilities`
+- `protected_paybox_card_plan`
+- `protected_paybox_card_demo`
+- `protected_paybox_card_evaluate`
+- `protected_paybox_swap_demo`
+- `protected_paybox_verify_record`
+
+It supports MCP `2026-07-28` stateless discovery and the retained legacy
+initialize flow. It rejects raw PAN, CVV, private-key, seed, OAuth-token, and
+client-secret shaped fields before evaluation.
+
+## Evidence contract
+
+Financial facts and product semantics have different authority requirements:
+
+| Evidence class | Examples | Live source required for enforcement |
+| --- | --- | --- |
+| Financial/identity | Merchant ID, domain, amount, currency, subtotal, tax, fees, tip, destination digest, credential scope | Authenticated PayBox, merchant, processor, or issuer artifact |
+| Product semantics | Item category, dietary attribute, condition, seller, restricted-item flag | Future generalized-extractor output with source provenance; current fixtures bind only solution plus recomputed request/response digests and confidence |
+
+The generalized evidence extractor is suitable for non-financial product
+semantics only. It must not determine the amount, fees, merchant identity,
+currency, card authorization, or whether funds moved. Missing, stale,
+ambiguous, contradictory, or internally inconsistent evidence returns
+`REVIEW`; it never fails open.
+
+All monetary values are integer minor-unit strings. The checkout snapshot
+digest binds merchant, items, arithmetic, destination, risk flags, and the
+proposed credential request. A changed field after evaluation invalidates the
+snapshot.
+
+## What real enforcement requires
+
+A skill or BYOA MCP can guide the agent, but the agent can bypass it if raw
+PayBox mutation tools remain available. Bypass resistance requires a mandatory Delta check inside PayBox's credential-release boundary:
+
+1. A merchant/evidence component supplies the basket semantics and an
+   authenticated checkout digest to the protected gate.
+2. PayBox authenticates the agent, forms its exact PAN-free credential envelope,
+   and sends operation/grant IDs, merchant scope, amount, currency, use count,
+   expiry, proposal digest, and evidence digest.
+3. Delta returns a compact fresh signed release token bound to those exact
+   fields; PayBox need not receive the underlying basket.
+4. PayBox returns a one-time credential only for an exact, unconsumed `PASS`.
+5. `BLOCK`, `REVIEW`, timeout, stale proof, or mismatch blocks autonomous
+   release. PayBox may route to separately authenticated passkey approval, which
+   is logged as direct human approval rather than a Delta `PASS`.
+6. PayBox, its processor, or issuer supplies available credential,
+   authorization, capture, reversal, refund, and expiry events for
+   reconciliation.
+
+Pilot latency targets, to be validated with PayBox, are p95 at or below 500 ms,
+p99 at or below 1,000 ms, and a 1,500 ms hard hook deadline when evidence is
+already available. The hook contains no PAN, CVV, or reusable credential.
+
+The analogous swap boundary remains a mandatory Delta check before PayBox
+signing/broadcast. Live quote/chain/simulation evidence is not present in this
+release.
+
+## Preserved swap fixture
+
+The plugin also includes one fixed Solana USDC-to-SOL exact-input simulation:
 
 ```bash
-./install --upgrade
-```
-
-Start a new chat after installation so the host reloads its skill inventory.
-Installation makes no network request and does not need PayBox or Delta
-credentials.
-
-## Run the prototype
-
-The repository checkout can also be run directly:
-
-```bash
-./run doctor
 ./run demo --scenario block-minimum-receive
 ./run demo --scenario pass
-./run demo --scenario review-stale
-./run inspect-tools \
-  --capture "$(pwd)/examples/paybox-tools-list.fixture.json"
 ```
 
-If Node is not on the login `PATH`, point the runner at an executable:
+It does not support arbitrary swap assets, live quotes, wallet access, signing,
+or broadcast.
+
+## Roadmap
+
+### Current release: card core
+
+- card purchase is the default demo;
+- DoorDash has a full decision matrix;
+- five additional representative commerce-archetype fixtures prove
+  common-schema reuse;
+- exact checkout and credential-request binding;
+- one-use persisted fixture ledger;
+- local MCP plus installable skill/plugin; and
+- execution remains locked.
+
+### Next engineering release: authenticated evidence adapter
+
+- a generalized-extractor adapter for product semantics;
+- raw-artifact golden corpus and adversarial extraction tests;
+- merchant/provider provenance and field-level source digests;
+- lifecycle state and authorization/capture/refund reconciliation; and
+- a PayBox hook conformance server and event simulator.
+
+### Partner release
+
+- authenticated PayBox card schema and sandbox;
+- mandatory pre-credential Delta hook with no alternate mutation path;
+- real signed Delta proof using pinned released Repyh dependencies;
+- provider idempotency and uncertain-result reconciliation; and
+- negotiated hook latency plus authenticated human/passkey fallback; and
+- verified merchant/region coverage based on end-to-end transactions.
+
+## Verification
+
+Run the complete local gate:
 
 ```bash
-PROTECTED_PAYBOX_NODE_BINARY=/absolute/path/to/node ./run demo --scenario pass
+npm test
+npm run check:skill
+npm run check:links
+npm run check:release
+npm run check:content
 ```
 
-The runner also checks the Codex runtime cache and the standard ChatGPT macOS
-app runtime before asking for a Node path.
-
-Compile a private custom plan:
-
-```bash
-./run plan \
-  --intent "$(pwd)/examples/solana-25-usdc-intent.json" \
-  --details
-```
-
-After reviewing the displayed mandate and authorizing it separately, run a
-labeled fixture against the saved plan and exact displayed digest:
-
-```bash
-./run demo \
-  --plan /absolute/path/from-the-plan-command.json \
-  --confirm-policy <displayed-policy-digest> \
-  --scenario pass
-```
-
-That example expresses exactly 25 USDC, at least 0.18 SOL, 1% maximum
-slippage, a 0.00005 SOL network-fee cap, a separate 0.00002 SOL priority-fee
-cap, and same-wallet settlement. It remains synthetic and does not estimate a
-live market price.
-
-The skill pauses for a separate user message before supplying the digest to
-the CLI. The local CLI proves only that the supplied digest matches the
-unchanged mandate; it cannot prove who authored the chat message or stop an
-agent that ignores the skill. Bypass-resistant enforcement still requires a
-mandatory Delta check inside PayBox's signing boundary.
-
-The CLI requires absolute paths for input files, rejects symlinks and files
-over 1 MiB, and writes optional artifacts as owner-only files.
-
-## Inspect a PayBox tool surface safely
-
-The offline inspector accepts a saved MCP `tools/list` response, bounds and
-validates the JSON, redacts value-bearing schema examples, and classifies each
-tool as `read`, `prepare`, `sign`, `broadcast`, `combined_write`, or
-`unknown`.
-
-```bash
-./run inspect-tools \
-  --capture /absolute/path/to/tools-list.json \
-  --out /absolute/private/paybox-tool-snapshot.json
-```
-
-Unknown, preparatory, mutating, destructive, or misleadingly annotated tools
-are never marked safe. The checked-in capture is synthetic. Even a real
-captured file is recorded as unauthenticated offline input until PayBox
-provides an authenticated contract or signed schema.
-
-## What is checked
-
-Deterministic code—not the model—owns:
-
-- closed schema and asset identity validation;
-- atomic-unit arithmetic;
-- policy construction and authorization digest;
-- reference-derived minimum receive;
-- fee, price-impact, balance and recipient limits;
-- exact fixture message-byte binding;
-- decoded top-level and inner program allowlists;
-- blockhash, quote, chain and simulation freshness;
-- replay/concurrency handling;
-- redaction-before-sealing;
-- receipt verification.
-
-The model may collect missing limits and explain results. It cannot author
-evidence, decide the verdict, or unlock execution.
-
-## Real, simulated and locked
-
-| Surface | Status |
-| --- | --- |
-| Natural-language workflow | Skill instructions implemented |
-| Closed intent and policy | Implemented locally |
-| Exact proposal evaluation | Implemented for labeled fixtures |
-| Local receipt | Unkeyed SHA-256 self-consistency checksum; not tamper-proof |
-| Source authenticity | Not established by fixture hashes |
-| Authenticated PayBox `tools/list` | Offline analyzer implemented; live contract not captured |
-| Live quote/chain/simulation | Not implemented |
-| Private Delta verifier/signature | Not integrated |
-| PayBox signing/broadcast | Unreachable |
-
-PayBox publicly documents scoped grants and operation-bound approvals, while
-its terms say it does not assess an agent client's intent or correctness.
-Protected PayBox makes the proposed missing layer concrete: evaluate the
-human mandate against exact pre-sign bytes, then require that decision inside
-PayBox's signing boundary.
-
-## Verification state
-
-The current source tree passes:
-
-- 133/133 full-suite tests, including 17/17 managed-installer tests, 10/10
-  local signing-hook conformance tests, and 2/2 release-content scanner tests;
-- installable-skill validation;
-- local-documentation-link validation;
-- release-metadata validation, including immutable GitHub Actions SHAs; and
-- source-content and credential-pattern scanning, including OAuth access,
-  refresh and session tokens plus client-secret forms.
-
-The managed-installer tests cover restricted-`PATH` runtime discovery,
-owner-only versioned storage, exact manifest verification, idempotency,
-explicit verified upgrade, operation after the extracted source is deleted,
-and a separate owner-only state directory whose one-use history survives a
-version upgrade.
-
-Run the local signing-hook subset directly with:
-
-```bash
-npm run conformance:hook
-```
-
-The committed-source archive has also passed same-commit, same-toolchain
-byte-repeatability, credential scanning, all 133 tests from the extracted
-archive, restricted-`PATH` cold install, source deletion, installed demo and
-offline-inspector checks, and the public execution lock. The published
-`v0.3.0` ZIP was independently re-downloaded from GitHub, matched the local
-archive byte for byte, passed its published SHA-256 checksum, and passed the
-same full cold-install validator. GitHub also reports the matching
-`sha256:21437fbe79582cf2935dd9221684a8126e0a8e3fa48437a4e4e245d1915933a8`
-asset digest.
+Release bundles are deterministic, content-scanned, cold-installed under a
+restricted `PATH`, tested after the extracted source is deleted, and accompanied
+by a SHA-256 checksum. CI tests Node 22 and Node 24 with Actions pinned to
+immutable commit SHAs.
 
 ## Documentation
 
+- [Design](docs/DESIGN.md)
+- [Tools](docs/TOOLS.md)
+- [Card evidence contract](docs/CARD-EVIDENCE-CONTRACT.md)
+- [Card execution contract](docs/CARD-EXECUTION.md)
+- [Modules](docs/MODULES.md)
 - [Project plan](docs/PROJECT-PLAN.md)
+- [Sprint log](docs/SPRINT-LOG.md)
 - [Security boundary](docs/SECURITY-BOUNDARY.md)
 - [Claim ledger](docs/CLAIM-LEDGER.md)
-- [PayBox signing-hook conformance hypothesis](docs/PAYBOX-SIGNING-HOOK-CONFORMANCE.md)
-- [Solana evidence contract](docs/SOLANA-EVIDENCE-CONTRACT.md)
-- [Sprint log](docs/SPRINT-LOG.md)
+- [Research](docs/RESEARCH.md)
+- [Stakeholder reviews](docs/STAKEHOLDER-REVIEWS.md)
 
-Primary external references:
+## Primary research
 
-- [PayBox connection and grant model](https://support.moonpay.com/en/articles/669841-how-agent-connections-work-in-paybox)
-- [MoonPay Terms, Section 6B](https://www.moonpay.com/legal/terms_of_use_bvi_launchpad)
-- [MoonPay swap skill](https://github.com/moonpay/skills/blob/main/skills/moonpay-swap-tokens/SKILL.md)
-- [Solana transaction model](https://solana.com/docs/core)
-- [Open Wallet Standard policy engine](https://raw.githubusercontent.com/open-wallet-standard/core/main/docs/03-policy-engine.md)
+- [PayBox](https://paybox.sh/)
+- [PayBox credential model](https://support.moonpay.com/en/articles/669779-paybox-store-credentials-once-let-ai-agents-pay-securely)
+- [PayBox agent connections](https://support.moonpay.com/en/articles/669841-how-agent-connections-work-in-paybox)
+- [PayBox FAQ](https://support.moonpay.com/en/articles/669843-paybox-faqs)
+- [MoonAgents Card](https://support.moonpay.com/en/articles/629708-moonagents-card-crypto-funded-virtual-payment-cards)
+- [MCP 2026-07-28 release](https://blog.modelcontextprotocol.io/posts/2026-07-28/)
 
-## Security
-
-Do not paste a seed phrase, private key, OAuth token, PayBox client key, or
-session key into the skill or CLI. This build does not need credentials.
-
-The managed manifest and release checksum are unkeyed integrity aids. They do
-not authenticate the publisher, resist an active editor with the same OS-user
-access, or cause the installed runner to re-verify every file on every launch.
-
-Report security issues privately rather than opening a public issue with
-sensitive data.
+Protected PayBox is an independent partner-evaluation prototype in a personal
+repository. It is not a MoonPay or PayBox product.

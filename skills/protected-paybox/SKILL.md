@@ -1,150 +1,133 @@
 ---
 name: protected-paybox
-description: Compile and evaluate one mandate-gated PayBox-shaped on-chain swap using the deterministic Protected PayBox harness. Use for protected PayBox swap dry runs, Solana USDC-to-SOL mandate capture, PASS/BLOCK/REVIEW demonstrations, receipt verification, or questions about the proposed Delta-before-PayBox signing boundary. The public skill is simulation-only and must never request PayBox credentials, signatures, broadcasts, or money movement.
+description: Compile and evaluate mandate-protected PayBox-shaped card-purchase fixtures, with DoorDash and representative ecommerce demos plus the preserved Solana USDC-to-SOL swap fixture. Use for card-spend mandate demos, PASS/BLOCK/REVIEW checkout evaluation, receipt verification, PayBox integration design, or Protected PayBox dry runs. The public build is simulation-only and must never request card details, PayBox credentials, signatures, authorizations, orders, or money movement.
 ---
 
 # Protected PayBox
 
-Use the bundled harness for every policy, evidence, decision, replay, and
-receipt operation. Do not reproduce enforcement in chat.
-
-## Start
-
-Say:
-
-```text
-Protected PayBox is ready.
-
-Start with a protected on-chain dry run. This release supports one exact-input
-USDC-to-SOL swap on Solana Mainnet, returning to the same wallet.
-
-It cannot contact PayBox, request a signature, broadcast, or move funds.
-
-Tell me the swap limits you want, or ask for the built-in near-miss demo.
-```
+Use the bundled harness or local MCP for every mandate, evidence, decision,
+replay, and receipt operation. Do not reproduce enforcement in chat.
 
 Read [references/action-surface.md](references/action-surface.md) before
 classifying a request. Read
 [references/evidence-boundary.md](references/evidence-boundary.md) before
 explaining evidence or integration claims.
 
-## Run a built-in demonstration
+## Start with card spend
 
-Use the runner without asking for credentials:
+Say:
 
-```bash
-skills/protected-paybox/scripts/run demo --scenario block-minimum-receive
-skills/protected-paybox/scripts/run demo --scenario pass
-skills/protected-paybox/scripts/run demo --scenario review-stale
+```text
+Protected PayBox is ready for a card-purchase dry run.
+
+The first demo uses a DoorDash-shaped checkout and can show an over-limit
+BLOCK, corrected PASS, or incomplete-evidence REVIEW. Everything is a local
+fixture: no PayBox connection, card credential, authorization, or order.
+Canned fixtures bind their own policy digest and must be described as
+`FIXTURE_AUTO_BOUND_NO_USER_AUTHORIZATION`.
 ```
 
-Lead with a meaningful `BLOCK`, then show the corrected `PASS`. Keep technical
-digests hidden unless the user asks for details.
-
-## Capture a custom mandate
-
-Gather only missing material limits:
-
-- exact USDC amount;
-- minimum SOL to receive;
-- maximum slippage and price impact;
-- maximum network and priority fees;
-- validity between 30 and 300 seconds;
-- Solana wallet public address.
-
-Never ask for a seed phrase, private key, OAuth token, client key, session key,
-or wallet export. Symbols are display labels only; the harness fixes the exact
-Solana chain and asset identifiers.
-
-Write a private intent JSON matching the closed example under `examples/`.
-Run:
+Then run the meaningful near miss before the pass:
 
 ```bash
-skills/protected-paybox/scripts/run plan \
-  --intent /absolute/private/intent.json \
+skills/protected-paybox/scripts/run card-demo --merchant doordash --scenario block-total
+skills/protected-paybox/scripts/run card-demo --merchant doordash --scenario pass
+skills/protected-paybox/scripts/run card-demo --merchant doordash --scenario review-incomplete
+```
+
+List the representative fixture pack with:
+
+```bash
+skills/protected-paybox/scripts/run card-merchants
+```
+
+Never call these entries live merchant coverage. They show that one neutral
+schema handles multiple commerce archetypes.
+
+## Capture a custom card mandate
+
+Gather only the missing non-secret constraints:
+
+- exact ordering platform key, display name, domain, and opaque
+  storefront/merchant account reference;
+- exact items, quantities, unit-price caps, and required scalar attributes;
+- ISO currency plus total, tax, tip, delivery-fee, and service-fee caps in
+  integer minor units;
+- SHA-256 digest of the normalized private delivery address and its postal
+  code;
+- validity between 30 and 900 seconds.
+
+Never ask for a PAN, CVV, full card expiry, account password, OAuth token,
+client key, wallet secret, or raw delivery address. Write a private intent
+matching `examples/card/doordash-intent.json`, then run:
+
+```bash
+skills/protected-paybox/scripts/run card-plan \
+  --intent /absolute/private/card-intent.json \
   --details
 ```
 
-Show the full plain-English mandate. Pause. The original request is not
-authorization. Continue only after a separate user message equivalent to:
+Show the entire mandate. Pause. The original request is not authorization.
+Continue only after a separate message equivalent to:
 
 ```text
 Authorize this mandate
 ```
 
-The CLI binds the supplied digest but cannot authenticate who authored a chat
-message. This pause is a required skill workflow, not a bypass-resistant
-security boundary. The skill alone cannot prevent an agent from bypassing it
-and calling a separately exposed PayBox mutation tool. Never claim otherwise.
+The harness binds the supplied digest but cannot authenticate who authored a
+chat message. It models a confirmation step; it does not enforce human
+authorization. A skill or local MCP alone cannot prevent an agent from bypassing
+it through a separately exposed PayBox mutation path.
 
-After that separate message, evaluate a labeled custom fixture using the
-saved plan path and the exact displayed policy digest:
+After that modeled confirmation workflow, evaluate a labeled fixture with the
+saved plan and exact displayed digest:
 
 ```bash
-skills/protected-paybox/scripts/run demo \
-  --plan /absolute/private/plan.json \
+skills/protected-paybox/scripts/run card-demo \
+  --plan /absolute/private/card-plan.json \
   --confirm-policy <displayed-policy-digest> \
   --scenario pass
 ```
 
-For this public release, use only a labeled fixture. Never describe fixture
-data as PayBox, Swaps.xyz, or Solana data.
-
 ## Present decisions
 
-Use the harness result exactly:
-
-- `PASS`: complete fixture evidence satisfies the mandate.
-- `BLOCK`: complete fixture evidence proves a mandate violation.
-- `REVIEW`: evidence is missing, stale, malformed, undecoded, contradictory,
+- `PASS`: complete fixture facts satisfy every closed mandate constraint.
+- `BLOCK`: complete fixture facts prove a violation.
+- `REVIEW`: evidence is stale, missing, ambiguous, contradictory, malformed,
   or unavailable.
-- `UNSUPPORTED`: the request is outside the closed action surface.
+- `UNSUPPORTED`: the request is outside the closed surface.
 
 Always state:
 
 ```text
-SIMULATION ONLY · NO PAYBOX CONTACT · NO SIGNATURE · NO TRANSACTION
+LOCAL FIXTURE ONLY · NO PAYBOX OR MERCHANT CONTACT · NO CARD CREATED OR AUTHORIZED · NO ORDER PLACED · NO MONEY MOVED
 ```
 
-Never imply a production Delta proof. The receipt is an unkeyed local
-self-consistency checksum. It detects changes only when the checksum is not
-also recomputed; it is not tamper-proof against an active editor.
+The receipt is an unkeyed local checksum, not a production Delta proof. Never
+describe generalized-extractor output as authoritative for checkout amounts,
+fees, merchant identity, or card authorization. It is limited to
+non-financial item semantics. Current fixtures recompute solution, request, and
+response bindings but contain no source artifact; live semantics require source
+provenance and live financial facts require authenticated merchant or provider
+evidence.
 
-## Refuse unsupported operations
+## Preserve the swap fixture
 
-Do not translate or approximate:
-
-- transfers or arbitrary recipients;
-- token approvals, delegates, permits, or additional signatures;
-- bridges or cross-chain actions;
-- exact-output swaps;
-- prediction markets, lending, tokenized equities, perpetuals, leverage, or
-  recurring strategies;
-- x402 or ecommerce purchases;
-- any live PayBox signing or broadcast.
-
-Explain which boundary is unsupported and ask for an exact-input,
-self-recipient USDC-to-SOL dry run instead.
-
-## Inspect a supplied tool capture
-
-If the user supplies a saved PayBox MCP `tools/list` JSON file, inspect it
-offline:
+For the older fixed on-chain example, run:
 
 ```bash
-skills/protected-paybox/scripts/run inspect-tools \
-  --capture /absolute/private/tools-list.json \
-  --out /absolute/private/paybox-tool-snapshot.json
+skills/protected-paybox/scripts/run demo --scenario block-minimum-receive
+skills/protected-paybox/scripts/run demo --scenario pass
 ```
 
-Treat only the harness classification as authoritative. Describe `read`
-entries as candidates, not verified-safe provider behavior. Every `prepare`,
-`sign`, `broadcast`, `combined_write`, or `unknown` entry requires a mandate
-gate. Do not request OAuth tokens or attempt to capture the tool list through
-a network call.
+It supports only Solana USDC-to-SOL exact-input fixture data. Do not imply
+arbitrary-asset swap coverage.
 
 ## Preserve the execution lock
 
-Treat `execute`, `sign`, and `broadcast` failure as a required product
-property. Do not patch, bypass, replace, or dynamically load an executor.
-Offline PayBox tool-schema inspection is not permission to move funds.
+Treat `execute`, `sign`, and `broadcast` failure as a required property. Do
+not patch, bypass, replace, or dynamically load an executor. Real card
+enforcement requires a mandatory Delta check after PayBox forms the exact
+credential request and before PayBox returns a payment token or one-time
+virtual card. `BLOCK`, `REVIEW`, timeout, mismatch, or stale evidence must
+fail closed.

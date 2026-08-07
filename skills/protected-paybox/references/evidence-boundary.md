@@ -1,44 +1,52 @@
 # Evidence and trust boundary
 
-## Current release
+## Current build
 
-The public harness uses deterministic local fixtures. It does not authenticate
-to PayBox, Swaps.xyz, or a Solana RPC endpoint. A fixture `PASS` proves only
-that one exact fixture proposal satisfied the local closed policy.
+The harness uses deterministic local fixtures. It does not authenticate to
+PayBox, a merchant, an issuer, a card network, the generalized evidence
+extractor, Swaps.xyz, or a chain RPC. Fixture `PASS` means only that one local
+proposal satisfied one local policy.
 
-The local receipt:
+The local receipt binds the policy, confirmation, proposal, evidence,
+checkout/message digest, decision, nonce, boundary, and expiry. It is an
+unkeyed SHA-256 self-consistency checksum: an active editor can change the
+record and recompute it. It is not a Delta signature or proof and does not
+authenticate the source of facts.
 
-- binds policy, authorization, proposal, evidence, message bytes, decision,
-  nonce, boundary, and expiry;
-- detects accidental or un-rehashed mutation by recomputing every binding;
-- is an unkeyed local self-consistency checksum, so an active editor can
-  recompute it;
-- is not a Delta signature or proof;
-- does not authenticate where fixture facts originated.
+## Card evidence classes
 
-## Required connected preflight
+Use the generalized evidence extractor only for non-financial item semantics
+such as category, dietary status, or product condition. Its current response
+is a sparse scalar map. Missing or ambiguous required attributes produce
+`REVIEW`. The fixture runtime recomputes the solution/request/response bindings
+but has no source artifact, so it cannot authenticate semantic provenance.
 
-A future connected mode requires:
+Never authorize financial facts from an LLM/product-page extraction. A real
+`PASS` needs provider- or merchant-authenticated merchant identity, exact
+basket, subtotal, tax, fees, tip, total, currency, fulfillment, checkout
+expiry, and staged credential-request bytes. It also needs a digest binding
+that exact object to the eventual release.
 
-1. authenticated PayBox tool schema and wallet/grant fingerprint;
-2. exact unsigned Solana message before approval or signing;
-3. PayBox builder/venue identity;
-4. current balances, mint state, slot, blockhash and fees;
-5. independent reference price;
-6. fully resolved v0 message and lookup tables;
-7. decoded top-level and inner instructions;
-8. simulation of identical message bytes;
-9. fresh blockhash validity immediately before signing.
+PayBox public Help Center documentation says payment-card support is Phase 2.
+No authenticated card MCP schema, provider, supported merchant list,
+pre-authorization hook, or authorization/capture event schema was available
+for this build.
 
-Missing or opaque pre-sign bytes must produce `REVIEW`, never `PASS`.
+## Required enforcement point
 
-## Source authenticity
+The mandatory hook belongs after PayBox authenticates the agent and forms the
+exact payment credential request, but before it returns a scoped payment token
+or one-time virtual card. PayBox must verify a fresh Delta decision bound to
+the exact merchant, amount, currency, expiry, use count, checkout digest, and
+credential-request digest. `BLOCK`, `REVIEW`, timeout, mismatch, reuse, or
+expiry must prevent release.
 
-OAuth, API keys and TLS can authenticate a channel but do not independently
-sign provider facts. Unkeyed hashes provide checksums after capture, not
-tamper-proofing or proof of original source truth. A finalized on-chain transaction is
-consensus-verifiable; a single RPC response remains provider-mediated.
+PayBox, its issuer/processor, or a merchant adapter must expose the available
+post-authorization events needed to reconcile credential, authorization,
+capture, reversal, refund, and merchant order IDs. The pilot must discover that
+contract rather than assume PayBox owns every event. Events can detect
+nonconformance and trigger recourse; they cannot retroactively block settled
+money.
 
-PayBox signing would prove that a wallet signed bytes. It would not prove the
-bytes satisfied the human mandate unless Delta is mandatory inside the
-signing boundary.
+Without the mandatory hook and exclusive credentialed path, a skill or local
+MCP is bypassable and must remain a partner-evaluation simulation.

@@ -25,15 +25,19 @@ const VERSION_PATTERN = /^\d+\.\d+\.\d+$/;
 const MARKER_NAME = ".protected-paybox-install.json";
 const NODE_PATH_NAME = ".protected-paybox-node";
 const COPY_ENTRIES = Object.freeze([
+  ".codex-plugin",
+  ".mcp.json",
   "README.md",
   "config",
   "docs",
+  "examples/card",
   "examples/paybox-tools-list.fixture.json",
   "examples/solana-25-usdc-intent.json",
   "examples/solana-usdc-to-sol-intent.json",
   "install",
   "package.json",
   "run",
+  "schemas",
   "scripts/check-local-links.mjs",
   "scripts/install-managed-copy.mjs",
   "scripts/scan-release-content.mjs",
@@ -46,8 +50,11 @@ const COPY_ENTRIES = Object.freeze([
   "src",
 ]);
 const REQUIRED_MANAGED_FILES = Object.freeze([
+  ".codex-plugin/plugin.json",
+  ".mcp.json",
   "package.json",
   "run",
+  "schemas/card-purchase-taxonomy.json",
   "skills/protected-paybox/SKILL.md",
   "skills/protected-paybox/scripts/run",
   "config/paybox-signing-hook.v1.schema.json",
@@ -60,6 +67,7 @@ const REQUIRED_MANAGED_FILES = Object.freeze([
   "scripts/check-local-links.mjs",
   "scripts/scan-release-content.mjs",
   "src/cli.js",
+  "src/mcp-server.js",
   "src/constants.js",
   "src/integration/paybox-hook-contract.js",
   "src/integration/production-composition.js",
@@ -625,7 +633,7 @@ function installRelease(
     `Managed copy: ${managedRoot}`,
     "Mode: credential-free simulation only.",
     "No PayBox contact, credential use, signature, broadcast, or transaction execution.",
-    "Start a new chat and ask: Use $protected-paybox for a protected Solana swap dry run.",
+    "Start a new chat and ask: Use $protected-paybox to show the DoorDash card BLOCK, PASS, and REVIEW story.",
     "",
   ].join("\n"));
 }

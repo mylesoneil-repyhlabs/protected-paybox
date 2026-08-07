@@ -290,6 +290,100 @@ test("one-use plan cannot PASS twice under different nonces", async (t) => {
   assert.equal(second.record.decision.code, "PLAN_ALREADY_USED");
 });
 
+test("a temporal REVIEW promotion durably consumes the plan exactly once", async (t) => {
+  const historyDirectory = await temporaryHistory(t);
+  const plan = createPlan(buildDemoIntent(), {
+    now: NOW,
+    id: "temporal-review-promotion",
+  });
+  const common = {
+    plan,
+    confirmationDigest: plan.policy_digest,
+    evidence: buildDemoEvidence(plan, { now: NOW }),
+    nonce: "temporal-review-nonce-01",
+    historyDirectory,
+  };
+
+  const review = await runPreflight({
+    ...common,
+    now: new Date(NOW.getTime() - 3_000),
+  });
+  assert.equal(review.record.decision.outcome, "REVIEW");
+  assert.equal(review.record.decision.code, "COLLECTION_STALE_FUTURE");
+
+  const promoted = await runPreflight({ ...common, now: NOW });
+  assert.equal(promoted.record.decision.outcome, "PASS");
+  assert.equal(promoted.replayed, false);
+
+  const exactReplay = await runPreflight({ ...common, now: NOW });
+  assert.equal(exactReplay.record.decision.outcome, "PASS");
+  assert.equal(exactReplay.replayed, true);
+  assert.equal(exactReplay.record.record_digest, promoted.record.record_digest);
+
+  const competing = await runPreflight({
+    ...common,
+    nonce: "temporal-competing-nonce-01",
+    now: NOW,
+  });
+  assert.equal(competing.record.decision.outcome, "BLOCK");
+  assert.equal(competing.record.decision.code, "PLAN_ALREADY_USED");
+});
+
+test("separate processes converge on one temporal REVIEW promotion", async (t) => {
+  const historyDirectory = await temporaryHistory(t);
+  const worker = path.join(
+    path.dirname(new URL(import.meta.url).pathname),
+    "fixtures",
+    "preflight-worker.mjs",
+  );
+  const plan = createPlan(buildDemoIntent(), {
+    now: NOW,
+    id: "cross-process-plan",
+  });
+  const evidence = buildDemoEvidence(plan, { now: NOW });
+  const nonce = "cross-process-temporal-nonce-01";
+  const review = await runPreflight({
+    plan,
+    confirmationDigest: plan.policy_digest,
+    evidence,
+    nonce,
+    now: new Date(NOW.getTime() - 3_000),
+    historyDirectory,
+  });
+  assert.equal(review.record.decision.outcome, "REVIEW");
+
+  const promotionGate = path.join(historyDirectory, "promotion.gate");
+  const promotions = Array.from({ length: 16 }, () =>
+    runWorker(worker, historyDirectory, "base", promotionGate, nonce),
+  );
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  await writeFile(promotionGate, "go\n", { mode: 0o600 });
+  const promoted = await Promise.all(promotions);
+  assert.ok(promoted.every((result) => result.outcome === "PASS"));
+  assert.equal(new Set(promoted.map((result) => result.record_digest)).size, 1);
+  assert.equal(promoted.filter((result) => result.replayed === false).length, 1);
+
+  const competitionGate = path.join(historyDirectory, "competition.gate");
+  const competitors = Array.from({ length: 16 }, (_, index) =>
+    runWorker(
+      worker,
+      historyDirectory,
+      "base",
+      competitionGate,
+      `cross-process-competing-nonce-${String(index).padStart(2, "0")}`,
+    ),
+  );
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  await writeFile(competitionGate, "go\n", { mode: 0o600 });
+  const blocked = await Promise.all(competitors);
+  assert.ok(
+    blocked.every(
+      (result) =>
+        result.outcome === "BLOCK" && result.code === "PLAN_ALREADY_USED",
+    ),
+  );
+});
+
 test("invalid nonce blocks without echoing it", async () => {
   const plan = createPlan(buildDemoIntent(), { now: NOW, id: "plan-bad-nonce" });
   const result = await runPreflight({
@@ -310,11 +404,11 @@ test("public sign, broadcast and execute boundary always throws", () => {
   );
 });
 
-function runWorker(worker, historyDirectory, variant, gatePath) {
+function runWorker(worker, historyDirectory, variant, gatePath, nonce) {
   return new Promise((resolve, reject) => {
     const child = spawn(
       process.execPath,
-      [worker, historyDirectory, variant, gatePath],
+      [worker, historyDirectory, variant, gatePath, ...(nonce ? [nonce] : [])],
       { stdio: ["ignore", "pipe", "pipe"] },
     );
     let stdout = "";

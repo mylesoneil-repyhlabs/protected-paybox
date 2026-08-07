@@ -147,6 +147,57 @@ for expected in \
   printf '%s\n' "$DOCTOR_OUTPUT" | grep -Fq "$expected"
 done
 
+CARD_BLOCK_OUTPUT="$(
+  env -i \
+    HOME="$COLD_HOME" \
+    PATH="/usr/bin:/bin" \
+    "$INSTALLED_SKILL/scripts/run" card-demo \
+      --merchant doordash \
+      --scenario block-total
+)"
+for expected in \
+  "LOCAL FIXTURE ONLY" \
+  "SIMULATED BLOCK" \
+  "\$6.48 USD over the authorized total cap" \
+  "NO CARD CREATED OR AUTHORIZED"; do
+  printf '%s\n' "$CARD_BLOCK_OUTPUT" | grep -Fq "$expected"
+done
+
+CARD_PASS_OUTPUT="$(
+  env -i \
+    HOME="$COLD_HOME" \
+    PATH="/usr/bin:/bin" \
+    "$INSTALLED_SKILL/scripts/run" card-demo \
+      --merchant doordash \
+      --scenario pass
+)"
+printf '%s\n' "$CARD_PASS_OUTPUT" | grep -Fq "SIMULATED PASS"
+printf '%s\n' "$CARD_PASS_OUTPUT" | grep -Fq "not permission to pay"
+
+CARD_REVIEW_OUTPUT="$(
+  env -i \
+    HOME="$COLD_HOME" \
+    PATH="/usr/bin:/bin" \
+    "$INSTALLED_SKILL/scripts/run" card-demo \
+      --merchant doordash \
+      --scenario review-incomplete
+)"
+printf '%s\n' "$CARD_REVIEW_OUTPUT" | grep -Fq "SIMULATED REVIEW"
+printf '%s\n' "$CARD_REVIEW_OUTPUT" | grep -Fq "no verified category"
+
+MCP_OUTPUT="$(
+  printf '%s\n' \
+    '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"protected_paybox_card_demo","arguments":{"merchant":"doordash","scenario":"block-total"},"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientInfo":{"name":"cold-release-gate","version":"1"},"io.modelcontextprotocol/clientCapabilities":{}}}}' |
+    env -i \
+      HOME="$COLD_HOME" \
+      PATH="/usr/bin:/bin" \
+      "$INSTALLED_SKILL/scripts/run" mcp
+)"
+printf '%s\n' "$MCP_OUTPUT" | grep -Fq '"jsonrpc":"2.0"'
+printf '%s\n' "$MCP_OUTPUT" | grep -Fq '"resultType":"complete"'
+printf '%s\n' "$MCP_OUTPUT" | grep -Fq '"outcome":"BLOCK"'
+printf '%s\n' "$MCP_OUTPUT" | grep -Fq '"authorization_mode":"FIXTURE_AUTO_BOUND_NO_USER_AUTHORIZATION"'
+
 DEMO_OUTPUT="$(
   env -i \
     HOME="$COLD_HOME" \

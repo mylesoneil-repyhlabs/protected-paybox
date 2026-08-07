@@ -45,4 +45,9 @@ else
   fi
 fi
 
+if [[ "${1:-}" == "mcp" ]]; then
+  shift
+  exec "$NODE_BINARY" "$HARNESS_DIR/src/mcp-server.js" "$@"
+fi
+
 exec "$NODE_BINARY" "$HARNESS_DIR/src/cli.js" "$@"

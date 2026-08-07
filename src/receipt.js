@@ -16,6 +16,7 @@ export function createRecord(evaluation, { now = new Date() } = {}) {
     schema_version: SCHEMAS.RECORD,
     generated_at: new Date(now).toISOString(),
     mode: evidence?.mode ?? "early_stop",
+    authorization_mode: evaluation.authorizationMode ?? "UNSPECIFIED",
     plan: {
       plan_id: evaluation.plan.plan_id,
       source_intent_digest: evaluation.plan.source_intent_digest,
@@ -24,16 +25,17 @@ export function createRecord(evaluation, { now = new Date() } = {}) {
     },
     confirmation: evaluation.confirmation,
     request_binding_digest: requestBindingDigest,
-    proposal: evidence
+    proposal: evaluation.proposal ?? (evidence
       ? {
           tool_contract: evidence.tool_contract,
           message: evidence.message,
           authorized_minimum_receive_atomic:
             evaluation.authorized_minimum_receive_atomic ?? null,
         }
-      : null,
+      : null),
     evidence,
     checks: evaluation.checks,
+    violations: evaluation.violations ?? [],
     decision: evaluation.decision,
     nonce_digest: digest(evaluation.nonce ?? "missing-nonce"),
     boundary: { ...PUBLIC_BOUNDARY },
@@ -136,11 +138,14 @@ function deriveBindings(base) {
       source_intent_digest: base.plan.source_intent_digest,
       policy_digest: base.plan.policy_digest,
       confirmation: base.confirmation,
+      authorization_mode: base.authorization_mode,
     }),
     request_binding_digest: base.request_binding_digest,
     proposal_digest: digest(base.proposal),
     evidence_digest: digest(base.evidence),
     message_sha256: base.proposal?.message?.message_sha256 ?? digest("no-message"),
+    checkout_snapshot_sha256:
+      base.proposal?.checkout_snapshot_sha256 ?? digest("no-checkout-snapshot"),
     tool_schema_digest:
       base.proposal?.tool_contract?.schema_digest ?? digest("no-tool-schema"),
     decision_digest: digest(base.decision),

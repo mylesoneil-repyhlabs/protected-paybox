@@ -1,0 +1,32 @@
+{
+  "schema_version": "protected-paybox.intent.card-purchase.v1",
+  "action_type": "commerce.card.purchase",
+  "merchant": {
+    "key": "doordash",
+    "display_name": "DoorDash",
+    "domain": "doordash.com",
+    "account_reference": "fixture-doordash-storefront"
+  },
+  "items": [
+    {
+      "item_id": "doordash:demo:veggie-bowl",
+      "title": "Demo veggie bowl",
+      "quantity": 1,
+      "max_unit_price_minor": "2000",
+      "required_attributes": {
+        "category": "prepared_meal",
+        "contains_alcohol": false,
+        "dietary": "vegetarian"
+      }
+    }
+  ],
+  "currency": "USD",
+  "max_total_minor": "3000",
+  "max_tax_minor": "250",
+  "max_tip_minor": "400",
+  "max_delivery_fee_minor": "400",
+  "max_service_fee_minor": "250",
+  "delivery_address_digest": "f68d6c06d5f6fba4bed93de75be378973ab2c521952f90eb4b130a3de665a2a5",
+  "delivery_postal_code": "10001",
+  "expires_in_seconds": 300
+}

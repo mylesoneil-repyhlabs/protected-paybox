@@ -3,7 +3,12 @@ import { buildDemoEvidence, buildDemoIntent } from "../../src/fixtures.js";
 import { createPlan } from "../../src/policy.js";
 import { runPreflight } from "../../src/preflight.js";
 
-const [historyDirectory, variant, gatePath] = process.argv.slice(2);
+const [
+  historyDirectory,
+  variant,
+  gatePath,
+  nonce = "cross-process-nonce-01",
+] = process.argv.slice(2);
 const now = new Date("2026-07-30T12:00:00Z");
 const plan = createPlan(buildDemoIntent(), {
   now,
@@ -20,7 +25,7 @@ const result = await runPreflight({
   plan,
   confirmationDigest: plan.policy_digest,
   evidence,
-  nonce: "cross-process-nonce-01",
+  nonce,
   now,
   historyDirectory,
 });
@@ -30,4 +35,5 @@ process.stdout.write(JSON.stringify({
   code: result.record.decision.code,
   record_digest: result.record.record_digest,
   replayed: result.replayed,
+  nonce,
 }));

@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "protected-paybox": {
+      "command": "./run",
+      "args": ["mcp"],
+      "cwd": "."
+    }
+  }
+}

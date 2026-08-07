@@ -1,7 +1,7 @@
 {
   "name": "protected-paybox",
-  "version": "0.3.0",
-  "description": "Mandate-gated PayBox on-chain swap simulation and conformance prototype.",
+  "version": "0.4.0",
+  "description": "Card-first mandate evaluation and on-chain swap simulation for PayBox partner evaluation.",
   "private": true,
   "type": "module",
   "engines": {
@@ -14,6 +14,7 @@
     "simulate": "node src/cli.js simulate",
     "verify": "node src/cli.js verify",
     "inspect-tools": "node src/cli.js inspect-tools",
+    "mcp": "node src/mcp-server.js",
     "test": "node --test test/*.test.js",
     "check:skill": "node scripts/validate-skill.mjs",
     "check:links": "node scripts/check-local-links.mjs",

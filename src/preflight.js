@@ -13,6 +13,10 @@ import {
 
 const inflight = new Map();
 const NONCE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{15,127}$/;
+const AUTHORIZATION_MODES = new Set([
+  "CALLER_SUPPLIED_DIGEST_UNAUTHENTICATED",
+  "FIXTURE_AUTO_BOUND_NO_USER_AUTHORIZATION",
+]);
 
 export async function runPreflight({
   plan,
@@ -21,7 +25,15 @@ export async function runPreflight({
   nonce,
   now = new Date(),
   historyDirectory = null,
+  evaluator = evaluateProposal,
+  authorizationMode = "CALLER_SUPPLIED_DIGEST_UNAUTHENTICATED",
 }) {
+  if (!AUTHORIZATION_MODES.has(authorizationMode)) {
+    throw new GuardError(
+      "AUTHORIZATION_MODE_INVALID",
+      "The preflight authorization mode is unsupported.",
+    );
+  }
   if (typeof nonce !== "string" || !NONCE_PATTERN.test(nonce)) {
     const evaluation = earlyDecision({
       plan,
@@ -32,6 +44,7 @@ export async function runPreflight({
       reason:
         "The one-use nonce must be 16–128 safe characters and was rejected before evaluation.",
       recovery: "Create a fresh nonce and run a new simulation.",
+      authorizationMode,
     });
     return {
       record: createRecord(evaluation, { now }),
@@ -54,6 +67,8 @@ export async function runPreflight({
         nonce,
         now,
         historyDirectory,
+        evaluator,
+        authorizationMode,
       });
     } finally {
       release();
@@ -75,11 +90,14 @@ async function runSerialized(input) {
     nonce,
     now,
     historyDirectory,
+    evaluator,
+    authorizationMode,
   } = input;
 
   // Authorization is deliberately checked before replay storage.
   if (confirmationDigest !== plan.policy_digest) {
-    const evaluation = evaluateProposal(input);
+    const evaluation = evaluator(input);
+    evaluation.authorizationMode = authorizationMode;
     return {
       record: createRecord(evaluation, { now }),
       replayed: false,
@@ -88,7 +106,8 @@ async function runSerialized(input) {
 
   // Re-evaluate before consulting history so an expired mandate or evidence
   // that has become stale can never inherit a historical PASS.
-  const evaluation = evaluateProposal(input);
+  const evaluation = evaluator(input);
+  evaluation.authorizationMode = authorizationMode;
   if (evaluation.decision.code === "MANDATE_EXPIRED") {
     return { record: createRecord(evaluation, { now }), replayed: false };
   }
@@ -104,7 +123,8 @@ async function runSerialized(input) {
     return { record: createRecord(evaluation, { now }), replayed: false };
   }
   evaluation.requestBindingDigest = semanticDigest;
-  const record = createRecord(evaluation, { now });
+  let record = createRecord(evaluation, { now });
+  let replayed = false;
 
   if (historyDirectory) {
     await ensurePrivateDirectory(historyDirectory);
@@ -115,10 +135,12 @@ async function runSerialized(input) {
         stored,
         semanticDigest,
         currentRecord: record,
+        historyDirectory,
         plan,
         confirmationDigest,
         nonce,
         now,
+        authorizationMode,
       });
     }
 
@@ -131,8 +153,11 @@ async function runSerialized(input) {
         semanticDigest,
         record,
         now,
+        authorizationMode,
       });
-      if (planUse) return planUse;
+      if (planUse.record.decision.outcome !== "PASS") return planUse;
+      record = planUse.record;
+      replayed = planUse.replayed;
     }
 
     const created = await writePrivateJsonOnce(storedPath, {
@@ -145,14 +170,16 @@ async function runSerialized(input) {
         stored,
         semanticDigest,
         currentRecord: record,
+        historyDirectory,
         plan,
         confirmationDigest,
         nonce,
         now,
+        authorizationMode,
       });
     }
   }
-  return { record, replayed: false };
+  return { record, replayed };
 }
 
 async function claimPlanUse({
@@ -163,15 +190,18 @@ async function claimPlanUse({
   semanticDigest,
   record,
   now,
+  authorizationMode,
 }) {
   const usePath = planUsePath(historyDirectory, plan.policy_digest);
   const claim = {
     policy_digest: plan.policy_digest,
     nonce_digest: digest(nonce),
     request_binding_digest: semanticDigest,
-    record_digest: record.record_digest,
+    pass_record: record,
   };
-  if (await writePrivateJsonOnce(usePath, claim)) return null;
+  if (await writePrivateJsonOnce(usePath, claim)) {
+    return { record, replayed: false };
+  }
 
   await assertPrivateRegularFile(usePath);
   const stored = await readJsonFile(usePath, "stored plan-use claim");
@@ -181,10 +211,15 @@ async function claimPlanUse({
       : [];
   if (
     keys.join(",") !==
-      "nonce_digest,policy_digest,record_digest,request_binding_digest" ||
+      "nonce_digest,pass_record,policy_digest,request_binding_digest" ||
     stored.policy_digest !== plan.policy_digest ||
-    ![stored.nonce_digest, stored.request_binding_digest, stored.record_digest]
-      .every((value) => typeof value === "string" && /^[a-f0-9]{64}$/.test(value))
+    ![stored.nonce_digest, stored.request_binding_digest]
+      .every((value) => typeof value === "string" && /^[a-f0-9]{64}$/.test(value)) ||
+    stored.pass_record?.decision?.outcome !== "PASS" ||
+    stored.pass_record?.plan?.policy_digest !== stored.policy_digest ||
+    stored.pass_record?.nonce_digest !== stored.nonce_digest ||
+    stored.pass_record?.request_binding_digest !== stored.request_binding_digest ||
+    verifyRecord(stored.pass_record).verified !== true
   ) {
     throw new GuardError(
       "PLAN_USE_RECORD_INVALID",
@@ -195,7 +230,7 @@ async function claimPlanUse({
     stored.nonce_digest === claim.nonce_digest &&
     stored.request_binding_digest === claim.request_binding_digest
   ) {
-    return null;
+    return { record: stored.pass_record, replayed: true };
   }
   const evaluation = earlyDecision({
     plan,
@@ -206,6 +241,7 @@ async function claimPlanUse({
     reason:
       "This one-use mandate already produced a PASS for another proposal attempt.",
     recovery: "Create and separately authorize a new mandate.",
+    authorizationMode,
   });
   return {
     record: createRecord(evaluation, { now }),
@@ -237,14 +273,16 @@ async function readStoredNonceRecord(storedPath) {
   return stored;
 }
 
-function resolveStoredRecord({
+async function resolveStoredRecord({
   stored,
   semanticDigest,
   currentRecord,
+  historyDirectory,
   plan,
   confirmationDigest,
   nonce,
   now,
+  authorizationMode,
 }) {
   if (stored.semantic_digest !== semanticDigest) {
     const evaluation = earlyDecision({
@@ -256,6 +294,7 @@ function resolveStoredRecord({
       reason:
         "This one-use nonce is already bound to different proposal semantics.",
       recovery: "Create a new nonce. The stored proposal cannot be replaced.",
+      authorizationMode,
     });
     return {
       record: createRecord(evaluation, { now }),
@@ -266,6 +305,27 @@ function resolveStoredRecord({
     stored.record?.decision?.outcome !== currentRecord.decision.outcome ||
     stored.record?.decision?.code !== currentRecord.decision.code
   ) {
+    if (
+      stored.record?.decision?.outcome === "REVIEW" &&
+      currentRecord.decision.outcome === "PASS"
+    ) {
+      return claimPlanUse({
+        historyDirectory,
+        plan,
+        confirmationDigest,
+        nonce,
+        semanticDigest,
+        record: currentRecord,
+        now,
+        authorizationMode,
+      });
+    }
+    if (
+      stored.record?.decision?.outcome === "PASS" &&
+      currentRecord.decision.outcome === "PASS"
+    ) {
+      return { record: stored.record, replayed: true };
+    }
     return { record: currentRecord, replayed: false };
   }
   return { record: stored.record, replayed: true };
@@ -287,6 +347,7 @@ function earlyDecision({
   code,
   reason,
   recovery,
+  authorizationMode = "UNSPECIFIED",
 }) {
   return {
     plan,
@@ -305,6 +366,8 @@ function earlyDecision({
     nonce,
     normalizedEvidence: null,
     checks: [],
+    violations: [],
+    authorizationMode,
     decision: { outcome, code, reason, recovery },
   };
 }
