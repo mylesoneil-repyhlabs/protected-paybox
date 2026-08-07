@@ -174,7 +174,9 @@ secret scanning, and value-plus-property-name no-echo tests.
 
 Final source verification passed 155/155 tests plus metadata, skill, link,
 content, shell-syntax, and diff checks. The official plugin and skill validators
-also passed. The committed release bundle must still be rebuilt and cold
-validated from the exact release commit before tagging.
+also passed. The committed merge, annotated tag, Node 22/24 CI, deterministic
+bundle job, and tag-triggered CI passed. A fresh GitHub release download matched
+the published digest and passed the full restricted-`PATH`, source-deletion
+cold-install gate.
 
 No reviewer reported an unresolved P0 or P1 after the final probe.

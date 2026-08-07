@@ -54,8 +54,8 @@ Status labels:
 | Repository root is a Codex plugin | `IMPLEMENTED` | Plugin manifest, MCP config, plugin validation |
 | Skill installer creates a managed private copy | `IMPLEMENTED` | Installer suite, digest marker, path/symlink protections |
 | MCP is dependency-free and supports current discovery | `IMPLEMENTED` | Modern `resultType`, unsupported-version, legacy-compatibility, and tool tests |
-| Release ZIP is deterministic and cold validated | `IMPLEMENTED` only after current release gate | Build script and source-deletion validator; report exact result after run |
-| GitHub tag/asset is published and verified | `IMPLEMENTED` only after publish | Do not claim until remote tag, asset digest, and re-download checks pass |
+| Release ZIP is deterministic and cold validated | `IMPLEMENTED` | v0.4.0 was rebuilt from merge commit `eede8c8`, then passed restricted-`PATH`, source-deletion cold validation |
+| GitHub tag/asset is published and verified | `IMPLEMENTED` | Annotated [v0.4.0](https://github.com/mylesoneil-repyhlabs/protected-paybox/releases/tag/v0.4.0) peels to `eede8c8`; the fresh release download was byte-identical and verified as SHA-256 `9e29f4408b8de2693062a82b107de505797537fe0942bcd29f264635fa55eac5` |
 
 ## Prohibited shorthand
 

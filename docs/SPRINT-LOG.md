@@ -111,12 +111,14 @@ updated. The targeted installer/card/MCP suite then passed 26/26.
 - metadata, skill, plugin, link, content, shell-syntax, and diff gates: passed;
 - final PayBox-owner, Delta CTO, and target-user re-gates: `GO`, with no open
   P0/P1 issues for the simulation-only partner release; and
-- committed deterministic bundle, source-deletion cold install, remote CI, and
-  tag/asset verification: required before publication is complete.
+- committed deterministic bundle, source-deletion cold install, PR and tag CI,
+  annotated tag, release assets, checksum, and fresh re-download verification:
+  passed for v0.4.0 at merge commit `eede8c8`.
 
 ## Mini-sprint
 
-Status: reviewer blockers resolved; committed release verification in progress.
+Status: v0.4.0 published and independently re-downloaded; live integration
+dependencies remain gated.
 
 Review findings and fixes are recorded in
 [Stakeholder reviews](STAKEHOLDER-REVIEWS.md). No release is final while a
