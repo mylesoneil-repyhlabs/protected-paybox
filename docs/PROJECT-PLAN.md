@@ -1,6 +1,6 @@
 # Project Plan
 
-Status: card-first v0.4.0 release candidate; source gate passed
+Status: card-first v0.4.0 released; live partner integration gated
 
 ## Product decision
 
