@@ -94,7 +94,7 @@ const TOOLS = Object.freeze([
     name: "protected_paybox_disconnect",
     title: "Disconnect the local PayBox session",
     description:
-      "Destroy the in-memory PayBox token and close the local MCP session. Server-side client revocation remains a separate PayBox action.",
+      "Destroy the in-memory PayBox token and attempt best-effort remote MCP session cleanup. Server-side client revocation remains a separate PayBox action.",
     inputSchema: closedObject({}),
     annotations: toolAnnotations({ readOnly: false, idempotent: true }),
   },

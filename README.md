@@ -97,8 +97,9 @@ you select even though this implementation calls only `initialize` and
 `tools/list`. Select no credential if PayBox permits; otherwise select one
 least-sensitive non-secret evaluation credential and require human approval
 for every operation. Never grant a raw secret for this test. The command
-performs authenticated capability discovery, closes the MCP session, and
-discards the in-memory token before printing its final result. Every connect
+performs authenticated capability discovery, attempts best-effort MCP session
+cleanup, and discards the in-memory token before printing its final result.
+Every connect
 attempt may leave its named registered client in PayBox, including an incomplete
 or failed attempt. Revoke every name reported by the command separately in
 PayBox's Clients screen when finished; its OAuth metadata does not advertise a

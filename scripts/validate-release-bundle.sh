@@ -207,7 +207,7 @@ DEMO_OUTPUT="$(
 )"
 printf '%s\n' "$DEMO_OUTPUT" | grep -Fq "PROTECTED PAYBOX"
 printf '%s\n' "$DEMO_OUTPUT" | grep -Fq "BLOCK"
-printf '%s\n' "$DEMO_OUTPUT" | grep -Fq "NO PAYBOX CONTACT"
+printf '%s\n' "$DEMO_OUTPUT" | grep -Fq "NO PAYBOX TOOL CALL"
 
 INSPECT_OUTPUT="$(
   env -i \

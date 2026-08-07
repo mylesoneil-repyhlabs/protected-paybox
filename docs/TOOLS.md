@@ -50,7 +50,7 @@ one-use fixture history through CLI options.
 | `protected_paybox_connect` | optional timeout, 60–600 seconds | PayBox authorization URL and session-only grant guidance |
 | `protected_paybox_connection_status` | none | `disconnected`, `authorization_pending`, or redacted `connected` status |
 | `protected_paybox_sync_tools` | none | Stable aliases, name digests, classifications, risk flags, and input/output schema digests |
-| `protected_paybox_disconnect` | none | Local token discard, session cleanup, and names requiring manual revocation in PayBox Clients |
+| `protected_paybox_disconnect` | none | Local token discard, best-effort session-cleanup attempt, and names requiring manual revocation in PayBox Clients |
 | `protected_paybox_card_plan` | closed card intent | Canonical plan and authorization prompt |
 | `protected_paybox_card_demo` | merchant, scenario | Fixture `PASS`, `BLOCK`, or `REVIEW` |
 | `protected_paybox_card_evaluate` | plan, evidence, digest, nonce | Exact card decision and local record |
