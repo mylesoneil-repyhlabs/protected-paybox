@@ -1,5 +1,5 @@
 export const PRODUCT_NAME = "Protected PayBox";
-export const VERSION = "0.3.0";
+export const VERSION = "0.4.0";
 
 export const SCHEMAS = Object.freeze({
   INTENT: "protected-paybox.intent.v1",
@@ -10,6 +10,11 @@ export const SCHEMAS = Object.freeze({
   RECORD: "protected-paybox.record.v1",
   RECEIPT: "protected-paybox.local-checksum-receipt.v1",
   PAYBOX_SIGNING_HOOK: "protected-paybox.paybox-signing-hook.v1",
+  CARD_INTENT: "protected-paybox.intent.card-purchase.v1",
+  CARD_POLICY: "protected-paybox.policy.card-purchase.v1",
+  CARD_EVIDENCE: "protected-paybox.evidence.card-purchase.v1",
+  CARD_CHECKOUT: "protected-paybox.checkout.card-purchase.v1",
+  CARD_PROVIDER_HOOK: "protected-paybox.paybox-card-hook.v1",
 });
 
 export const DECISIONS = Object.freeze({
@@ -53,8 +58,10 @@ export const PUBLIC_BOUNDARY = Object.freeze({
   transaction_broadcast: false,
   funds_moved: false,
   execution_available: false,
+  payment_credential_requested: false,
+  card_authorization_requested: false,
   statement:
-    "SIMULATION ONLY · NO PAYBOX CONTACT · NO SIGNATURE · NO TRANSACTION",
+    "LOCAL FIXTURE ONLY · NO PAYBOX CONTACT · NO CREDENTIAL OR AUTHORIZATION · NO SIGNATURE OR BROADCAST · NO ORDER · NO MONEY MOVED",
 });
 
 export const DEFAULT_FRESHNESS = Object.freeze({

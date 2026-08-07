@@ -23,6 +23,18 @@ import {
   writePrivateText,
 } from "./io.js";
 import { createPlan, formatMandate, validatePlan } from "./policy.js";
+import { listRepresentativeMerchants } from "./card/catalog.js";
+import { evaluateCardProposal } from "./card/evaluator.js";
+import {
+  buildCardDemoEvidence,
+  buildCardDemoIntent,
+  CARD_DEMO_SCENARIOS,
+} from "./card/fixtures.js";
+import {
+  createCardPlan,
+  formatCardMandate,
+  validateCardPlan,
+} from "./card/policy.js";
 import { buildPayboxToolSnapshot } from "./paybox-discovery.js";
 import { assertExecutionLocked, runPreflight } from "./preflight.js";
 import { formatDecision, renderHtml } from "./report.js";
@@ -51,6 +63,18 @@ async function main() {
       return;
     case "demo":
       await demoCommand(options);
+      return;
+    case "card-merchants":
+      await cardMerchantsCommand(options);
+      return;
+    case "card-plan":
+      await cardPlanCommand(options);
+      return;
+    case "card-demo":
+      await cardDemoCommand(options);
+      return;
+    case "card-simulate":
+      await cardSimulateCommand(options);
       return;
     case "simulate":
       await simulateCommand(options);
@@ -93,10 +117,136 @@ async function doctor(options) {
   print(options.json ? result : [
     `${PRODUCT_NAME} v${VERSION}`,
     `Node ${result.node}: ${result.node_supported ? "ready" : "unsupported"}`,
-    "Mode: credential-free simulated fixture",
+    "Mode: credential-free simulated fixtures (card first; swap preserved)",
     "Execution: locked; no execution adapter",
     "PayBox/network contact: none",
   ].join("\n"));
+}
+
+async function cardMerchantsCommand(options) {
+  noUnknownOptions(options, ["json"]);
+  const merchants = listRepresentativeMerchants();
+  if (options.json) {
+    print({
+      merchants,
+      boundary:
+        "Representative fixtures only; no live PayBox card or merchant coverage claim.",
+    });
+    return;
+  }
+  print([
+    "REPRESENTATIVE CARD FIXTURES · NOT LIVE MERCHANT COVERAGE",
+    "",
+    ...merchants.map(
+      (merchant) =>
+        `${merchant.display_name} · ${merchant.archetype} · ${merchant.status}`,
+    ),
+  ].join("\n"));
+}
+
+async function cardPlanCommand(options) {
+  noUnknownOptions(options, ["intent", "out", "json", "details"]);
+  requireOption(options, "intent");
+  const intent = await readJsonFile(options.intent, "card intent file");
+  const plan = createCardPlan(intent);
+  const outputDirectory = path.resolve(
+    options.out ?? path.join(runtimeRoot(), "card-plans"),
+  );
+  const outputPath = path.join(outputDirectory, `${plan.plan_id}.json`);
+  await writePrivateJson(outputPath, plan);
+  if (options.json) {
+    print({ plan_path: outputPath, plan });
+    return;
+  }
+  print(formatCardMandate(plan));
+  if (options.details) {
+    print(`\nPlan: ${outputPath}\nPolicy digest: ${plan.policy_digest}`);
+  }
+}
+
+async function cardDemoCommand(options) {
+  noUnknownOptions(options, [
+    "merchant",
+    "scenario",
+    "json",
+    "details",
+    "out",
+    "plan",
+    "confirm-policy",
+  ]);
+  const merchant = options.merchant ?? "doordash";
+  const scenario = options.scenario ?? "pass";
+  if (!CARD_DEMO_SCENARIOS.includes(scenario)) {
+    throw new GuardError("SCENARIO_UNKNOWN", `Unknown card scenario: ${scenario}`);
+  }
+  const now = new Date();
+  let plan;
+  let confirmationDigest;
+  if (options.plan) {
+    requireOption(options, "confirm-policy");
+    plan = await readJsonFile(options.plan, "card plan file");
+    validateCardPlan(plan);
+    confirmationDigest = options["confirm-policy"];
+  } else {
+    if (options["confirm-policy"]) {
+      throw new GuardError(
+        "OPTION_INVALID",
+        "--confirm-policy is accepted only with a saved --plan.",
+      );
+    }
+    plan = createCardPlan(buildCardDemoIntent(merchant), {
+      now,
+      id: `card-demo-${digest(`${merchant}-${scenario}-${now.toISOString()}`).slice(0, 20)}`,
+    });
+    confirmationDigest = plan.policy_digest;
+  }
+  const evidence = buildCardDemoEvidence(plan, { scenario, now });
+  const result = await runPreflight({
+    plan,
+    confirmationDigest,
+    evidence,
+    nonce: `card-demo-${merchant}-${scenario}-${digest(now.toISOString()).slice(0, 24)}`,
+    now,
+    historyDirectory: options.plan
+      ? path.join(runtimeRoot(), "card-history")
+      : null,
+    evaluator: evaluateCardProposal,
+    authorizationMode: options.plan
+      ? "CALLER_SUPPLIED_DIGEST_UNAUTHENTICATED"
+      : "FIXTURE_AUTO_BOUND_NO_USER_AUTHORIZATION",
+  });
+  await persistRecord(result.record, options.out);
+  if (options.json) print({ ...result, verification: verifyRecord(result.record) });
+  else print(formatDecision(result.record, { details: options.details === true }));
+}
+
+async function cardSimulateCommand(options) {
+  noUnknownOptions(options, [
+    "plan",
+    "evidence",
+    "confirm-policy",
+    "nonce",
+    "json",
+    "details",
+    "out",
+  ]);
+  for (const required of ["plan", "evidence", "confirm-policy", "nonce"]) {
+    requireOption(options, required);
+  }
+  const plan = await readJsonFile(options.plan, "card plan file");
+  validateCardPlan(plan);
+  const evidence = await readJsonFile(options.evidence, "card evidence file");
+  const result = await runPreflight({
+    plan,
+    confirmationDigest: options["confirm-policy"],
+    evidence,
+    nonce: options.nonce,
+    historyDirectory: path.join(runtimeRoot(), "card-history"),
+    evaluator: evaluateCardProposal,
+  });
+  await persistRecord(result.record, options.out);
+  if (options.json) print({ ...result, verification: verifyRecord(result.record) });
+  else print(formatDecision(result.record, { details: options.details === true }));
 }
 
 async function planCommand(options) {
@@ -180,6 +330,9 @@ async function demoCommand(options) {
     historyDirectory: options.plan
       ? path.join(runtimeRoot(), "history")
       : null,
+    authorizationMode: options.plan
+      ? "CALLER_SUPPLIED_DIGEST_UNAUTHENTICATED"
+      : "FIXTURE_AUTO_BOUND_NO_USER_AUTHORIZATION",
   });
   await persistRecord(result.record, options.out);
   if (options.json) print({ ...result, verification: verifyRecord(result.record) });
@@ -390,6 +543,11 @@ Usage:
   ./run demo --scenario pass|block-minimum-receive|review-stale [--details] [--out /private/directory]
   ./run demo --plan /absolute/plan.json --confirm-policy <digest> --scenario pass
   ./run simulate --plan /absolute/plan.json --evidence /absolute/evidence.json --confirm-policy <digest> --nonce <one-use-nonce>
+  ./run card-merchants [--json]
+  ./run card-plan --intent /absolute/card-intent.json [--out /private/directory] [--details]
+  ./run card-demo --merchant doordash --scenario pass|block-total|review-stale [--details]
+  ./run card-demo --plan /absolute/card-plan.json --confirm-policy <digest> --scenario pass
+  ./run card-simulate --plan /absolute/card-plan.json --evidence /absolute/card-evidence.json --confirm-policy <digest> --nonce <one-use-nonce>
   ./run verify --record /absolute/record.json
   ./run inspect-tools --capture /absolute/tools-list.json [--out /private/snapshot.json]
 

@@ -1,0 +1,29 @@
+{
+  "name": "protected-paybox",
+  "version": "0.4.0",
+  "description": "Card-first Delta mandate partner-evaluation fixtures for PayBox, with a preserved on-chain swap demo.",
+  "author": {
+    "name": "Myles O'Neil",
+    "url": "https://github.com/mylesoneil-repyhlabs"
+  },
+  "homepage": "https://github.com/mylesoneil-repyhlabs/protected-paybox",
+  "repository": "https://github.com/mylesoneil-repyhlabs/protected-paybox",
+  "keywords": ["delta", "paybox", "card", "mandate", "mcp"],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Protected PayBox",
+    "shortDescription": "Simulate mandate-protected card purchases",
+    "longDescription": "Run credential-free card-purchase and on-chain swap fixtures that demonstrate exact mandate evaluation before a future PayBox credential-release hook.",
+    "developerName": "Myles O'Neil",
+    "category": "Developer Tools",
+    "capabilities": ["Local MCP", "Simulation", "PASS/BLOCK/REVIEW"],
+    "websiteURL": "https://github.com/mylesoneil-repyhlabs/protected-paybox",
+    "defaultPrompt": [
+      "Show a blocked DoorDash purchase, then the corrected pass.",
+      "List the card-purchase mandate checks.",
+      "Explain what PayBox must integrate for real enforcement."
+    ],
+    "brandColor": "#17211B"
+  }
+}

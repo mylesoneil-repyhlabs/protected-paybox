@@ -56,6 +56,7 @@ const expectedScripts = {
   "check:links": "node scripts/check-local-links.mjs",
   "check:release": "node scripts/validate-release-metadata.mjs",
   "check:content": "node scripts/scan-release-content.mjs . --source-tree",
+  mcp: "node src/mcp-server.js",
   "conformance:hook": "node --test test/paybox-hook-contract.test.js",
   "release:bundle": "bash scripts/build-release-bundle.sh HEAD",
 };
@@ -85,6 +86,8 @@ for (const lockedBoundary of [
   "transaction_broadcast: false",
   "funds_moved: false",
   "execution_available: false",
+  "payment_credential_requested: false",
+  "card_authorization_requested: false",
 ]) {
   assert(
     constantsSource.includes(lockedBoundary),
@@ -112,10 +115,10 @@ for (const requiredClaim of [
   "# Protected PayBox",
   "credential-free and simulation-only",
   "cannot prove who authored the chat message",
-  "mandatory Delta check inside PayBox's signing boundary",
+  "mandatory Delta check inside PayBox's credential-release boundary",
   "Unkeyed SHA-256 self-consistency checksum",
-  "Live quote/chain/simulation",
-  "PayBox signing/broadcast",
+  "Representative fixtures are not merchant coverage",
+  "payment-card support as Phase 2",
 ]) {
   assert(
     readme.includes(requiredClaim),
@@ -160,6 +163,8 @@ assert(
 );
 
 for (const requiredPath of [
+  ".codex-plugin/plugin.json",
+  ".mcp.json",
   "docs/CLAIM-LEDGER.md",
   "docs/PAYBOX-SIGNING-HOOK-CONFORMANCE.md",
   "docs/PROJECT-PLAN.md",
@@ -167,10 +172,14 @@ for (const requiredPath of [
   "docs/SOLANA-EVIDENCE-CONTRACT.md",
   "docs/SPRINT-LOG.md",
   "examples/paybox-tools-list.fixture.json",
+  "examples/card/doordash-intent.json",
+  "schemas/card-purchase-taxonomy.json",
   "scripts/build-release-bundle.sh",
   "scripts/install-managed-copy.mjs",
   "scripts/validate-release-bundle.sh",
   "test/install.test.js",
+  "test/card.test.js",
+  "test/mcp-server.test.js",
   "test/paybox-hook-contract.test.js",
   "test/release-content-scan.test.js",
 ]) {

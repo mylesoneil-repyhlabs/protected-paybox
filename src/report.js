@@ -1,8 +1,12 @@
 import { atomicToDecimal } from "./decimal.js";
 import { SOLANA_PROFILE } from "./constants.js";
 import { verifyRecord } from "./receipt.js";
+import { formatCardDecision } from "./card/report.js";
 
 export function formatDecision(record, { details = false } = {}) {
+  if (record.plan?.policy?.action_type === "commerce.card.purchase") {
+    return formatCardDecision(record, { details });
+  }
   const policy = record.plan.policy;
   const decision = record.decision;
   const evidence = record.evidence;
@@ -51,6 +55,9 @@ export function formatDecision(record, { details = false } = {}) {
 }
 
 export function renderHtml(record) {
+  if (record.plan?.policy?.action_type === "commerce.card.purchase") {
+    return renderCardHtml(record);
+  }
   const verification = verifyRecord(record);
   const outcome = escapeHtml(record.decision.outcome);
   const color =
@@ -91,6 +98,29 @@ export function renderHtml(record) {
 </section></main></body></html>`;
 }
 
+function renderCardHtml(record) {
+  const verification = verifyRecord(record);
+  const decision = record.decision;
+  const policy = record.plan.policy;
+  const evidence = record.evidence;
+  const color = decision.outcome === "PASS"
+    ? "#0f766e"
+    : decision.outcome === "BLOCK"
+      ? "#b42318"
+      : "#a15c00";
+  return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Protected PayBox card ${escapeHtml(decision.outcome)}</title><style>
+:root{font-family:Inter,ui-sans-serif,system-ui,sans-serif;background:#f4f2ec;color:#17211b}body{margin:0;padding:40px 20px}.shell{max-width:820px;margin:auto}.card{background:#fff;border:1px solid #dfe3dd;border-radius:18px;padding:28px;box-shadow:0 18px 50px rgba(29,43,34,.08)}h1{font-size:36px}.verdict{border-left:5px solid ${color};padding:14px 18px;background:#f8faf8;border-radius:8px}.verdict strong{color:${color};font-size:22px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:20px 0}.fact{padding:16px;background:#f7f6f2;border-radius:12px}.fact b{display:block;margin-bottom:5px}.boundary{margin-top:22px;padding-top:18px;border-top:1px solid #e4e7e2;font-weight:650}code{font-size:12px;overflow-wrap:anywhere}@media(max-width:640px){.grid{grid-template-columns:1fr}}</style></head>
+<body><main class="shell"><h1>Protected PayBox · card purchase</h1><section class="card"><div class="verdict"><strong>${escapeHtml(decision.outcome)}</strong><p>${escapeHtml(decision.reason)}</p></div><div class="grid">
+<div class="fact"><b>Merchant</b>${escapeHtml(policy.merchant.display_name)} · ${escapeHtml(policy.merchant.domain)}</div>
+<div class="fact"><b>Maximum total</b>${escapeHtml(formatCardMinor(policy.money.max_total_minor, policy.money.currency))}</div>
+<div class="fact"><b>Checkout</b>${escapeHtml(evidence?.checkout?.snapshot_id ?? "Not reached")}</div>
+<div class="fact"><b>Receipt</b>${verification.verified ? "Local checksum self-consistent; not signed" : "Checksum verification failed"}</div></div>
+<p><b>Why:</b> ${escapeHtml(decision.reason)}</p>${decision.recovery ? `<p><b>Recovery:</b> ${escapeHtml(decision.recovery)}</p>` : ""}
+<div class="boundary">${escapeHtml(record.boundary.statement)}</div><p><small>Partner-evaluation fixture only. No PayBox card credential, card authorization, Delta proof, or merchant order was created.</small></p><code>${escapeHtml(record.receipt.receipt_digest)}</code></section></main></body></html>`;
+}
+
 function escapeHtml(value) {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -98,4 +128,10 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function formatCardMinor(value, currency) {
+  if (currency !== "USD") return `${currency} ${value} minor units`;
+  const amount = BigInt(value);
+  return `$${amount / 100n}.${(amount % 100n).toString().padStart(2, "0")} USD`;
 }

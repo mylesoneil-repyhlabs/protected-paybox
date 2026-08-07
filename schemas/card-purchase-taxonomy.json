@@ -1,0 +1,41 @@
+{
+  "schema_version": "protected-paybox.taxonomy.card-purchase.v1",
+  "category": "PAYBOX-CARD-PURCHASE",
+  "action_type": "commerce.card.purchase",
+  "description": "Merchant-neutral scalar evidence for a staged card purchase. Financial fields require authoritative checkout or provider evidence in a real integration.",
+  "attributes": {
+    "merchant_key": { "type": "string", "critical": true },
+    "merchant_domain": { "type": "string", "critical": true },
+    "merchant_account_reference": { "type": "string", "critical": true },
+    "merchant_mcc": { "type": "string", "critical": false },
+    "currency": { "type": "string", "critical": true },
+    "subtotal_minor": { "type": "integer_string", "critical": true },
+    "tax_minor": { "type": "integer_string", "critical": true },
+    "delivery_fee_minor": { "type": "integer_string", "critical": true },
+    "service_fee_minor": { "type": "integer_string", "critical": true },
+    "other_fee_minor": { "type": "integer_string", "critical": true },
+    "tip_minor": { "type": "integer_string", "critical": true },
+    "discount_minor": { "type": "integer_string", "critical": true },
+    "total_minor": { "type": "integer_string", "critical": true },
+    "item_count": { "type": "integer", "critical": true },
+    "fulfillment_type": { "type": "string", "critical": true },
+    "delivery_postal_code": { "type": "string", "critical": true },
+    "delivery_address_digest": { "type": "string", "critical": true },
+    "payment_merchant_scope": { "type": "string", "critical": true },
+    "payment_amount_minor": { "type": "integer_string", "critical": true },
+    "payment_use_count": { "type": "integer", "critical": true },
+    "payment_recurring": { "type": "boolean", "critical": true },
+    "checkout_snapshot_sha256": { "type": "string", "critical": true },
+    "provider_authenticated": { "type": "boolean", "critical": true },
+    "evidence_complete": { "type": "boolean", "critical": true }
+  },
+  "representative_fixture_merchants": [
+    { "key": "doordash", "display_name": "DoorDash", "domain": "doordash.com", "archetype": "meal_delivery" },
+    { "key": "amazon", "display_name": "Amazon", "domain": "amazon.com", "archetype": "marketplace_retail" },
+    { "key": "uber", "display_name": "Uber", "domain": "uber.com", "archetype": "mobility" },
+    { "key": "instacart", "display_name": "Instacart", "domain": "instacart.com", "archetype": "grocery_delivery" },
+    { "key": "walmart", "display_name": "Walmart", "domain": "walmart.com", "archetype": "omnichannel_retail" },
+    { "key": "target", "display_name": "Target", "domain": "target.com", "archetype": "omnichannel_retail" }
+  ],
+  "claim_boundary": "Fixture entries demonstrate common schema coverage only. They do not establish live PayBox card support, ordering integration, acceptance, or merchant coverage."
+}

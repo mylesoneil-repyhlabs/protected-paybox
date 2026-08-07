@@ -4,8 +4,10 @@ import { execFile } from "node:child_process";
 import {
   lstat,
   mkdtemp,
+  readdir,
   readFile,
   rm,
+  writeFile,
 } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -156,5 +158,53 @@ test("caller cannot redirect the canonical one-use history store", async () => {
       path.join(os.tmpdir(), "alternate-protected-paybox-history"),
     ]),
     /Unsupported option: history/,
+  );
+});
+
+test("card-plan rejects credential aliases and values before persisting a plan", async (t) => {
+  const temporary = await temporaryDirectory(t);
+  const outputDirectory = path.join(temporary, "plans");
+  const source = JSON.parse(
+    await readFile(path.join(root, "examples", "card", "doordash-intent.json"), "utf8"),
+  );
+  const pan = ["4111", "1111", "1111", "1111"].join("");
+  const bearer = `${"Bea"}${"rer"} ${"b".repeat(32)}`;
+  const privateKeyValue = `fixture-${"sensitive".repeat(4)}`;
+  const cases = [
+    ["pan", (intent) => { intent.items[0].title = `Demo ${pan}`; }, pan],
+    ["token", (intent) => { intent.items[0].title = `Demo ${bearer}`; }, bearer],
+    [
+      "key-alias",
+      (intent) => { intent[["private", "key"].join("_")] = privateKeyValue; },
+      privateKeyValue,
+    ],
+  ];
+
+  for (const [name, mutate, secretValue] of cases) {
+    const intent = structuredClone(source);
+    mutate(intent);
+    const intentPath = path.join(temporary, `${name}.json`);
+    await writeFile(intentPath, `${JSON.stringify(intent)}\n`, { mode: 0o600 });
+    let rejected;
+    try {
+      await execFileAsync(process.execPath, [
+        cli,
+        "card-plan",
+        "--intent",
+        intentPath,
+        "--out",
+        outputDirectory,
+      ]);
+    } catch (error) {
+      rejected = error;
+    }
+    assert.ok(rejected, `${name} input should be rejected`);
+    assert.match(rejected.stderr, /SENSITIVE_INPUT_REJECTED/);
+    assert.equal(rejected.stderr.includes(secretValue), false);
+  }
+
+  assert.deepEqual(
+    (await readdir(temporary)).sort(),
+    ["key-alias.json", "pan.json", "token.json"],
   );
 });

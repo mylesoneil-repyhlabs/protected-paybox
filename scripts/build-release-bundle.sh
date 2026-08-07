@@ -90,12 +90,15 @@ FIRST_ARCHIVE="$BUILD_DIRECTORY/first/$ARCHIVE_NAME"
 SECOND_ARCHIVE="$BUILD_DIRECTORY/second/$ARCHIVE_NAME"
 
 RELEASE_PATHS=(
+  ".codex-plugin"
   ".github/workflows/ci.yml"
+  ".mcp.json"
   ".nvmrc"
   "README.md"
   "package.json"
   "install"
   "run"
+  "schemas"
   "config"
   "docs"
   "examples"
@@ -154,19 +157,27 @@ fi
 unzip -Z1 "$FIRST_ARCHIVE" > "$ARCHIVE_LIST"
 for required_file in \
   ".github/workflows/ci.yml" \
+  ".codex-plugin/plugin.json" \
+  ".mcp.json" \
   "README.md" \
   "config/paybox-signing-hook.v1.schema.json" \
   "docs/PAYBOX-SIGNING-HOOK-CONFORMANCE.md" \
   "docs/SOLANA-EVIDENCE-CONTRACT.md" \
+  "examples/card/doordash-intent.json" \
   "examples/paybox-tools-list.fixture.json" \
   "install" \
   "package.json" \
   "run" \
+  "schemas/card-purchase-taxonomy.json" \
   "skills/protected-paybox/SKILL.md" \
+  "src/card/evaluator.js" \
   "src/cli.js" \
   "src/integration/production-composition.js" \
   "src/integration/paybox-hook-contract.js" \
+  "src/mcp-server.js" \
+  "test/card.test.js" \
   "test/install.test.js" \
+  "test/mcp-server.test.js" \
   "test/paybox-hook-contract.test.js" \
   "test/release-content-scan.test.js"; do
   if ! grep -Fqx "$ARCHIVE_PREFIX$required_file" "$ARCHIVE_LIST"; then
@@ -182,8 +193,8 @@ while IFS= read -r archive_path; do
   fi
   relative_path="${archive_path#"$ARCHIVE_PREFIX"}"
   case "$relative_path" in
-    ""|*/|.github/workflows/ci.yml|.nvmrc|README.md|package.json|install|run|\
-    config/*|docs/*|examples/*|skills/*|src/*|test/*|\
+    ""|*/|.codex-plugin/*|.github/workflows/ci.yml|.mcp.json|.nvmrc|README.md|package.json|install|run|\
+    config/*|docs/*|examples/*|schemas/*|skills/*|src/*|test/*|\
     scripts/build-release-bundle.sh|\
     scripts/check-local-links.mjs|\
     scripts/install-managed-copy.mjs|\
